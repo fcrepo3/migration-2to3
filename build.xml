@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="fedora-utilities" default="release" basedir=".">
+
+  <!-- defines build options and lib paths -->
+  <loadproperties srcFile="build.properties"/>
+
+  <!-- jars required to compile the analyzer -->
+  <path id="analyzer.compile.classpath">
+    <pathelement location="${lib.fedora-server}"/>
+    <pathelement location="${lib.log4j}"/>
+  </path>
+
+  <!-- jars required to compile the generator -->
+  <path id="generator.compile.classpath">
+    <pathelement location="${lib.fedora-server}"/>
+    <pathelement location="${lib.log4j}"/>
+  </path>
+
+  <!-- jars required to compile the transformer -->
+  <path id="transformer.compile.classpath">
+    <pathelement location="${lib.fedora-server}"/>
+    <pathelement location="${lib.log4j}"/>
+  </path>
+
+  <!-- analyzer-classes -->
+  <target name="analyzer-classes">
+    <mkdir dir="build/analyzer-classes"/>
+    <javac srcdir="src/java" destdir="build/analyzer-classes" 
+           includes="fedora/utilities/cmda/analyzer/**" 
+           classpathref="analyzer.compile.classpath"
+           optimize="${optimize}" 
+           debug="${debug}"
+           source="${source}"
+           target="${target}">
+        <compilerarg line="-Xlint:-serial -Xlint:unchecked"/>
+    </javac>
+  </target>
+
+  <!-- generator-classes -->
+  <target name="generator-classes">
+    <mkdir dir="build/generator-classes"/>
+    <javac srcdir="src/java" destdir="build/generator-classes" 
+           includes="fedora/utilities/cmda/generator/**" 
+           classpathref="generator.compile.classpath"
+           optimize="${optimize}" 
+           debug="${debug}"
+           source="${source}"
+           target="${target}">
+        <compilerarg line="-Xlint:-serial -Xlint:unchecked"/>
+    </javac>
+  </target>
+
+  <!-- transformer-classes -->
+  <target name="transformer-classes">
+    <mkdir dir="build/transformer-classes"/>
+    <javac srcdir="src/java" destdir="build/transformer-classes" 
+           includes="fedora/utilities/transformer/**" 
+           classpathref="transformer.compile.classpath"
+           optimize="${optimize}" 
+           debug="${debug}"
+           source="${source}"
+           target="${target}">
+        <compilerarg line="-Xlint:-serial -Xlint:unchecked"/>
+    </javac>
+  </target>
+
+  <!-- analyzer-jar -->
+  <target name="analyzer-jar"
+          depends="analyzer-classes"
+          description="Build analyzer.jar in dist/">
+    <mkdir dir="dist"/>
+    <jar jarfile="dist/analyzer.jar"
+         basedir="build/analyzer-classes"/>
+  </target>
+  
+  <!-- generator-jar -->
+  <target name="generator-jar"
+          depends="generator-classes"
+          description="Build generator.jar in dist/">
+    <mkdir dir="dist"/>
+    <jar jarfile="dist/generator.jar"
+         basedir="build/generator-classes"/>
+  </target>
+
+  <!-- transformer-jar -->
+  <target name="transformer-jar"
+          depends="transformer-classes"
+          description="Build transformer.jar in dist/">
+    <mkdir dir="dist"/>
+    <jar jarfile="dist/transformer.jar"
+         basedir="build/transformer-classes"/>
+  </target>
+
+  <!-- dist -->
+  <target name="dist"
+          depends="analyzer-jar, generator-jar, transformer-jar"
+          description="Build all distributable jars in dist/">
+  </target>
+
+  <!-- clean -->
+  <target name="clean"
+          description="Remove all build-generated files and directories">
+      <delete dir="build"/>
+      <delete dir="dist"/>
+  </target>
+</project>
