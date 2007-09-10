@@ -64,13 +64,37 @@
     </javac>
   </target>
 
-  <!-- analyzer-jar -->
-  <target name="analyzer-jar"
+  <!-- analyzer-lib -->
+  <target name="analyzer-lib"
           depends="analyzer-classes"
-          description="Build analyzer.jar in dist/">
+          description="Build analyzer.jar in build/analyzer-lib">
+    <mkdir dir="build/analyzer-lib"/>
+    <jar jarfile="build/analyzer-lib/analyzer-lib.jar"
+         basedir="build/analyzer-classes">
+      <manifest>
+        <attribute name="Main-Class" value="fedora.utilities.cmda.analyzer.Analyzer"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <!-- analyzer-dist -->
+  <target name="analyzer-dist"
+          depends="analyzer-lib"
+          description="Build single jar executable for analyzer in dist/">
+    <mkdir dir="build/analyzer-dist"/>
+    <unjar src="${lib.one-jar}" dest="build/analyzer-dist"/>
+    <mkdir dir="build/analyzer-dist/main"/>
+    <copy file="build/analyzer-lib/analyzer-lib.jar" todir="build/analyzer-dist/main"/>
+    <mkdir dir="build/analyzer-dist/lib"/>
+    <copy file="${lib.log4j}" todir="build/analyzer-dist/lib"/>
+    <copy file="src/config/log4j.properties" todir="build/analyzer-dist"/>
     <mkdir dir="dist"/>
     <jar jarfile="dist/analyzer.jar"
-         basedir="build/analyzer-classes"/>
+         basedir="build/analyzer-dist">
+      <manifest>
+        <attribute name="Main-Class" value="com.simontuffs.onejar.Boot"/>
+      </manifest>
+    </jar>
   </target>
   
   <!-- generator-jar -->
@@ -93,7 +117,7 @@
 
   <!-- dist -->
   <target name="dist"
-          depends="analyzer-jar, generator-jar, transformer-jar"
+          depends="analyzer-dist, generator-jar, transformer-jar"
           description="Build all distributable jars in dist/">
   </target>
 
