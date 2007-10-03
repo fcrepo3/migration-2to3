@@ -87,6 +87,7 @@
     <copy file="build/analyzer-lib/analyzer-lib.jar" todir="build/analyzer-dist/main"/>
     <mkdir dir="build/analyzer-dist/lib"/>
     <copy file="${lib.log4j}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.fedora-server}" todir="build/analyzer-dist/lib"/>
     <copy file="src/config/log4j.properties" todir="build/analyzer-dist"/>
     <mkdir dir="dist"/>
     <jar jarfile="dist/analyzer.jar"
