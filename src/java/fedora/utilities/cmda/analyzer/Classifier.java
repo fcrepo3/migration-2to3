@@ -3,7 +3,7 @@ package fedora.utilities.cmda.analyzer;
 import fedora.server.storage.types.DigitalObject;
 
 /**
- * Inteface for classifying Fedora objects based on their content.
+ * Interface for classifying Fedora objects based on their content.
  *
  * @author cwilper@cs.cornell.edu
  */
