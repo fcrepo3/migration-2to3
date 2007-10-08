@@ -14,6 +14,9 @@ public class Signature {
     private String m_origContentModelID;
 
     /** See constructor for description. */
+    private Set<String> m_bDefPIDs;
+
+    /** See constructor for description. */
     private Set<String> m_bMechPIDs;
 
     /** See constructor for description. */
@@ -44,6 +47,8 @@ public class Signature {
      * exactly match the values given in the parameter (no more, no less).
      *
      * @param origContentModelID    constrains the original content model id.
+     * @param bDefsPIDs             constrains the bdefs used by old-style
+     *                              disseminators.
      * @param bMechPIDs             constrains the bmechs used by old-style
      *                              disseminators.
      * @param bindingKeyAssignments constrains the binding keys used by
@@ -62,12 +67,14 @@ public class Signature {
      *                              have.
      */
     public Signature(String origContentModelID,
+            Set<String> bDefPIDs, 
             Set<String> bMechPIDs, 
             Map<String, Set<String>> bindingKeyAssignments,
             Set<String> datastreamIDs,
             Map<String, String> mimeTypes,
             Map<String, String> formatURIs) {
         m_origContentModelID = origContentModelID;
+        m_bDefPIDs = bDefPIDs;
         m_bMechPIDs = bMechPIDs;
         m_bindingKeyAssignments = bindingKeyAssignments;
         m_datastreamIDs = datastreamIDs;
@@ -83,6 +90,16 @@ public class Signature {
      */
     public String getOrigContentModelID() {
         return m_origContentModelID;
+    }
+
+    /**
+     * Gets the constraint on the bDefs used by old-style disseminators.
+     *
+     * @return the pids of the bDefs, or null if this signature does not
+     *         constrain this aspect.
+     */
+    public Set<String> getBDefPIDs() {
+        return m_bDefPIDs;
     }
 
     /**
@@ -172,6 +189,9 @@ public class Signature {
             if (!equals(m_origContentModelID, s.getOrigContentModelID())) {
                 return false;
             }
+            if (!equals(m_bDefPIDs, s.getBDefPIDs())) {
+                return false;
+            }
             if (!equals(m_bMechPIDs, s.getBMechPIDs())) {
                 return false;
             }
@@ -209,7 +229,7 @@ public class Signature {
      */
     @Override
     public int hashCode() {
-        return addHashCodes(m_origContentModelID, m_bMechPIDs, 
+        return addHashCodes(m_origContentModelID, m_bDefPIDs, m_bMechPIDs, 
                 m_bindingKeyAssignments, m_datastreamIDs, m_mimeTypes,
                 m_formatURIs);
     }

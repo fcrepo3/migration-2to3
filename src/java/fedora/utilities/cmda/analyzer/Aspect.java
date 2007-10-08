@@ -10,6 +10,8 @@ public enum Aspect {
 
     ORIG_CONTENT_MODEL      ("OrigContentModel"),
 
+    BDEF_PIDS               ("BDefPIDs"),
+
     BMECH_PIDS              ("BMechPIDs"),
 
     BINDING_KEY_ASSIGNMENTS ("BindingKeyAssignments"),

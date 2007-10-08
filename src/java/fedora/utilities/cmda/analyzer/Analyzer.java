@@ -1,14 +1,16 @@
 package fedora.utilities.cmda.analyzer;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
@@ -23,6 +25,18 @@ import fedora.server.storage.types.DigitalObject;
  * @author cwilper@cs.cornell.edu
  */
 public class Analyzer {
+
+    /** The classifier that will be used if none is specified. */
+    public static final String DEFAULT_CLASSIFIER
+            = "fedora.utilities.cmda.analyzer.DefaultClassifier";
+
+    /** The serializer that will be used if none is specified. */
+    public static final String DEFAULT_SERIALIZER
+            = "fedora.server.storage.translation.FOXMLDOSerializer";
+
+    /** The object source that will be used if none is specified. */
+    public static final String DEFAULT_OBJECT_SOURCE
+            = "fedora.utilities.cmda.analyzer.DirObjectSource";
 
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Analyzer.class);
@@ -57,6 +71,31 @@ public class Analyzer {
     }
 
     /**
+     * Constructs an analyzer with configuration taken from the given
+     * properties.
+     *
+     * <p><b>Specifying the Classifier</b><br/>
+     * If <code>classifier</code> is specified, an instance of the class it
+     * names will be constructed by passing in the given properties to its
+     * Properties (or no-arg) constructor.  Otherwise, the default classifier
+     * will be used.
+     *
+     * <p><b>Specifying the Serializer</b><br/>
+     * If <code>serializer</code> is specified, an instance of the class it
+     * names will be constructed by passing in the given properties to its
+     * Properties (or no-arg) constructor.  Otherwise, the default serializer
+     * will be used.
+     *
+     * @param props the properties to get configuration from.
+     */
+    public Analyzer(Properties props) {
+        m_classifier = (Classifier) Analyzer.construct(props, "classifier",
+                DEFAULT_CLASSIFIER);
+        m_serializer = (DOSerializer) Analyzer.construct(props, "serializer",
+                DEFAULT_SERIALIZER);
+    }
+
+    /**
      * Iterates the given objects, classifying them and sending output
      * to the given directory.
      *
@@ -65,8 +104,7 @@ public class Analyzer {
      *                  any files.  If it doesn't yet exist, it will be
      *                  created.
      */
-    public void classifyAll(Iterator<DigitalObject> objects,
-            File outputDir) {
+    public void classifyAll(ObjectSource objects, File outputDir) {
         clearState();
         setOutputDir(outputDir);
         try {
@@ -153,8 +191,84 @@ public class Analyzer {
      * Command-line entry point for the analyzer.
      */
     public static void main(String[] args) {
-        LOG.warn("Not implemented");
-        // TODO: use system props to pass these in (simplifies parsing)
+        if (args.length != 1) {
+            printUsage();
+            System.exit(0);
+        } else {
+            if (args[0].equals("--help")) {
+                printHelp();
+                System.exit(0);
+            }
+            try {
+                Properties props;
+                if (args[0].equals("--")) {
+                    props = System.getProperties();
+                } else {
+                    props = new Properties();
+                    props.load(new FileInputStream(args[0]));
+                }
+                Analyzer analyzer = new Analyzer(props);
+                ObjectSource source = (ObjectSource) Analyzer.construct(props,
+                        "objectSource", DEFAULT_OBJECT_SOURCE);
+                String outputDir = getRequiredString(props, "outputDir");
+                analyzer.classifyAll(source, new File(outputDir));
+            } catch (FileNotFoundException e) {
+                LOG.error("Configuration file not found: " + args[0]);
+                System.exit(1);
+            } catch (Throwable th) {
+                LOG.error("Analysis failed due to the following unexpected "
+                        + "error", th);
+                System.exit(1);
+            }
+        }
+    }
+
+    private static void printUsage() {
+        System.out.println("Usage: 1) java -jar analyzer.jar config.properties");
+        System.out.println("   Or: 2) java -jar analyzer.jar --");
+        System.out.println("   Or: 3) java -jar analyzer.jar --help");
+        System.out.println();
+        System.out.println("Usage 1 runs analysis with configuration from the given file.");
+        System.out.println("Usage 2 runs analysis with configuration from system properties.");
+        System.out.println("Usage 3 prints examples and configuration details.");
+    }
+
+    private static void printHelp() {
+        // TODO: print examples and configuration details
+        System.out.println("You can't be helped.");
+    }
+
+    // TODO: put this util method in another class
+    public static String getRequiredString(Properties props, String name) {
+        String value = props.getProperty(name);
+        if (value == null) {
+            throw new RuntimeException("Required property missing: " + name);
+        } else {
+            return value;
+        }
+    }
+
+    // TODO: put this util method in another class
+    public static Object construct(Properties props, String propName,
+            String defaultClassName) {
+        String className = props.getProperty(propName);
+        if (className == null) {
+            className = defaultClassName;
+        }
+        try {
+            Class clazz = Class.forName(className);
+            return clazz.getConstructor(Properties.class).newInstance(props);
+        } catch (NoSuchMethodException e) {
+            try {
+                return Class.forName(className).newInstance();
+            } catch (Exception e2) {
+                throw new RuntimeException("Error constructing "
+                        + className + "()", e2);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error constructing "
+                    + className + "(Properties)", e);
+        }
     }
 
 }

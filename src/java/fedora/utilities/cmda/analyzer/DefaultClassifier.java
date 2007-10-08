@@ -2,12 +2,19 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.UnsupportedEncodingException;
 
+import java.lang.reflect.Constructor;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
+import org.apache.log4j.Logger;
+
+import fedora.common.Constants;
+import fedora.common.PID;
 
 import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.Datastream;
@@ -24,28 +31,43 @@ import fedora.server.storage.types.DSBinding;
  */
 public class DefaultClassifier implements Classifier {
 
-    private static final String ENCODING = "UTF-8";
+    public static final String DEFAULT_PID_GENERATOR
+            = "fedora.utilities.cmda.analyzer.DefaultPIDGenerator";
 
-    private static final String CMODEL_DS_ID = "DS_COMPOSITE_MODEL";
+    /** Logger for this class. */
+    private static final Logger LOG = Logger.getLogger(
+            DefaultClassifier.class);
 
-    private static final String CMODEL_DS_VERSION_ID = CMODEL_DS_ID + "1.0";
+    private static final String CHAR_ENCODING = "UTF-8";
 
-    private static final String CMODEL_DS_CONTROL_GROUP = "X";
+    private static final String INLINE_DS_CONTROL_GROUP = "X";
 
-    private static final String CMODEL_DS_LABEL = "Datastream Composite Model";
+    private static final String INLINE_DS_MIME_TYPE = "text/xml";
 
-    private static final String CMODEL_DS_MIMETYPE = "text/xml";
+    private static final String DS_VERSION_ID_SUFFIX = "1.0";
 
-    private Map<Signature, DigitalObject> m_contentModels;
+    private static final String COMP_MODEL_DS_ID = "DS-COMPOSITE-MODEL";
+
+    private static final String COMP_MODEL_DS_LABEL = "DS Composite Model";
+
+    private static final String RELS_EXT_DS_ID = "RELS-EXT";
+
+    private static final String RELS_EXT_DS_LABEL = "Relationships";
 
     private Set<Aspect> m_aspects;
 
+    private PIDGenerator m_pidGen;
+
+    private Map<Signature, DigitalObject> m_contentModels;
+
     /**
      * Constructs an instance that uses the given aspects for the purpose of
-     * classification.
+     * classification, and the given generator for the purpose of assigning
+     * pids to generated content models.
      */
-    public DefaultClassifier(Set<Aspect> aspects) {
-        m_aspects = aspects;
+    public DefaultClassifier(Set<Aspect> aspects, PIDGenerator pidGen) {
+        setAspects(aspects);
+        m_pidGen = pidGen;
         m_contentModels = new HashMap<Signature, DigitalObject>();
     }
 
@@ -53,27 +75,28 @@ public class DefaultClassifier implements Classifier {
      * Constructs an instance using the configuration from the given
      * properties.
      *
+     * <p><b>Aspect Configuration</b>
+     * <br/>
      * By default, no aspects are considered for the purpose of
-     * classification.  If a property is found that specifies 
-     * "use.AspectName", the aspect name must be one of those defined
-     * in the <code>Aspect</code> enum, and the value must be "true" or
-     * "false".
+     * classification.  If a property is found of the form
+     * <code>use.AspectName</code>, the aspect name must be one of those
+     * defined in the <code>Aspect</code> enum, and the value must be "true" or
+     * "false".</p>
+     *
+     * <p><b>PIDGenerator Configuration</b>
+     * <br/>
+     * By default, a built-in PID generator will be used that generates
+     * PIDs of the form: <code>demo:GeneratedPID#</code>, where #
+     * is incremented for each new PID.  If a property is found named
+     * <code>pidGenerator</code>, the value specifies the PIDGenerator
+     * class to use, and the class must have a constructor that accepts
+     * a Properties object for configuration.
      */
-    public DefaultClassifier(Properties config) {
-        m_aspects = new HashSet<Aspect>();
+    public DefaultClassifier(Properties props) {
+        setAspects(getAspectsFromProperties(props));
+        m_pidGen = (PIDGenerator) Analyzer.construct(props, "pidGen",
+                DEFAULT_PID_GENERATOR);
         m_contentModels = new HashMap<Signature, DigitalObject>();
-        for (Aspect aspect : Aspect.values()) {
-            String propName = "use." + aspect.getName();
-            String value = config.getProperty(propName);
-            if (value != null) {
-                if (value.equalsIgnoreCase("true")) {
-                    m_aspects.add(aspect);
-                } else if (!value.equalsIgnoreCase("false")) {
-                    throw new IllegalArgumentException("Boolean property "
-                            + "must have value of true or false: " + propName);
-                }
-            }
-        }
     }
 
     //---
@@ -91,73 +114,130 @@ public class DefaultClassifier implements Classifier {
     // Instance helpers
     //---
 
-    private boolean using(Aspect aspect) {
-        return m_aspects.contains(aspect);
+    private void setAspects(Set<Aspect> aspects) {
+        for (Aspect aspect : aspects) {
+            logExplicitUse(aspect);
+        }
+        if (aspects.contains(Aspect.BINDING_KEY_ASSIGNMENTS)
+                && !aspects.contains(Aspect.BMECH_PIDS)) {
+            logImplicitUse(Aspect.BMECH_PIDS, Aspect.BINDING_KEY_ASSIGNMENTS);
+            aspects.add(Aspect.BMECH_PIDS);
+        }
+        if (aspects.contains(Aspect.BMECH_PIDS)
+                && !aspects.contains(Aspect.BDEF_PIDS)) {
+            logImplicitUse(Aspect.BDEF_PIDS, Aspect.BMECH_PIDS);
+            aspects.add(Aspect.BDEF_PIDS);
+        }
+        if (aspects.contains(Aspect.MIME_TYPES)
+                && !aspects.contains(Aspect.DATASTREAM_IDS)) {
+            logImplicitUse(Aspect.DATASTREAM_IDS, Aspect.MIME_TYPES);
+            aspects.add(Aspect.DATASTREAM_IDS);
+        }
+        if (aspects.contains(Aspect.FORMAT_URIS)
+                && !aspects.contains(Aspect.DATASTREAM_IDS)) {
+            logImplicitUse(Aspect.DATASTREAM_IDS, Aspect.FORMAT_URIS);
+            aspects.add(Aspect.DATASTREAM_IDS);
+        }
+        m_aspects = aspects;
     }
 
-    @SuppressWarnings("unchecked")
     private DigitalObject getContentModel(Signature signature) {
         if (m_contentModels.containsKey(signature)) {
             return m_contentModels.get(signature);
         } else {
             DigitalObject cModelObj = new BasicDigitalObject();
-            cModelObj.datastreams(CMODEL_DS_ID).add(getCModelDS(signature));
+            cModelObj.setPid(m_pidGen.getNextPID().toString());
+            addRelsExtDSIfNeeded(cModelObj, signature);
+            addCompModelDSIfNeeded(cModelObj, signature);
             m_contentModels.put(signature, cModelObj);
             return cModelObj;
         }
     }
 
     private Signature getSignature(DigitalObject obj) {
-        return new Signature(getOrigContentModelConstraint(obj),
-                getBMechPIDConstraints(obj),
-                getBindingKeyAssignmentConstraints(obj),
-                getDatastreamIDConstraints(obj),
-                getMIMETypeConstraints(obj),
-                getFormatURIConstraints(obj));
+        return new Signature(
+                m_aspects.contains(Aspect.ORIG_CONTENT_MODEL)
+                        ? obj.getContentModelId() : null,
+                m_aspects.contains(Aspect.BDEF_PIDS)
+                        ? getBDefPIDs(obj) : null,
+                m_aspects.contains(Aspect.BMECH_PIDS)
+                        ? getBMechPIDs(obj) : null,
+                m_aspects.contains(Aspect.BINDING_KEY_ASSIGNMENTS)
+                        ? getBindingKeyAssignments(obj) : null,
+                m_aspects.contains(Aspect.DATASTREAM_IDS)
+                        ? getDatastreamIDs(obj) : null,
+                m_aspects.contains(Aspect.MIME_TYPES)
+                        ? getMIMETypes(obj) : null,
+                m_aspects.contains(Aspect.FORMAT_URIS)
+                        ? getFormatURIs(obj) : null);
     }
 
-    private String getOrigContentModelConstraint(DigitalObject obj) {
-        if (using(Aspect.ORIG_CONTENT_MODEL)) {
-            return obj.getContentModelId();
-        } else {
-            return null;
+    //---
+    // Static helpers
+    //---
+
+    private static void logExplicitUse(Aspect explicit) {
+        LOG.info("Using '" + explicit.getName() + "' for "
+                + "classification");
+    }
+
+    private static void logImplicitUse(Aspect implicit, Aspect impliedBy) {
+        LOG.info("Using '" + implicit.getName() + "' for "
+                + "classification (implied by '" + impliedBy.getName() + "')");
+    }
+
+    private static Set<Aspect> getAspectsFromProperties(Properties props) {
+        Set<Aspect> aspects = new HashSet<Aspect>();
+        for (Aspect aspect : Aspect.values()) {
+            String name = "use." + aspect.getName();
+            String value = props.getProperty(name);
+            if (value != null) {
+                if (value.equalsIgnoreCase("true")) {
+                    aspects.add(aspect);
+                } else if (!value.equalsIgnoreCase("false")) {
+                    throw new IllegalArgumentException("Boolean property "
+                            + "must have value of true or false: " + name);
+                }
+            }
         }
+        return aspects;
     }
 
-    private Set<String> getBMechPIDConstraints(DigitalObject obj) {
-        if (using(Aspect.BMECH_PIDS)) {
-            return getBMechPIDs(obj);
-        } else {
-            return null;
-        }
-    }
-
-    private Set<String> getBMechPIDs(DigitalObject obj) {
+    private static Set<String> getBDefPIDs(DigitalObject obj) {
         Set<String> set = new HashSet<String>();
         Iterator dissIDs = obj.disseminatorIdIterator();
         while (dissIDs.hasNext()) {
-            Disseminator diss = getLatestDissVersion(obj, (String) dissIDs.next());
+            Disseminator diss = getLatestDissVersion(obj,
+                    (String) dissIDs.next());
+            set.add(diss.bDefID);
+        }
+        return set;
+    }
+
+    private static Set<String> getBMechPIDs(DigitalObject obj) {
+        Set<String> set = new HashSet<String>();
+        Iterator dissIDs = obj.disseminatorIdIterator();
+        while (dissIDs.hasNext()) {
+            Disseminator diss = getLatestDissVersion(obj, 
+                    (String) dissIDs.next());
             set.add(diss.bMechID);
         }
         return set;
     }
 
-    private Map<String, Set<String>> getBindingKeyAssignmentConstraints(
+    private static Map<String, Set<String>> getBindingKeyAssignments(
             DigitalObject obj) {
-        if (using(Aspect.BINDING_KEY_ASSIGNMENTS)) {
-            Map<String, Set<String>> map = new HashMap<String, Set<String>>();
-            Iterator dissIDs = obj.disseminatorIdIterator();
-            while (dissIDs.hasNext()) {
-                Disseminator diss = getLatestDissVersion(obj, (String) dissIDs.next());
-                map.put(diss.bMechID, getBindingKeyAssignments(diss));
-            }
-            return map;
-        } else {
-            return null;
+        Map<String, Set<String>> map = new HashMap<String, Set<String>>();
+        Iterator dissIDs = obj.disseminatorIdIterator();
+        while (dissIDs.hasNext()) {
+            Disseminator diss = getLatestDissVersion(obj, 
+                    (String) dissIDs.next());
+            map.put(diss.bMechID, getBindingKeyAssignments(diss));
         }
+        return map;
     }
 
-    private Set<String> getBindingKeyAssignments(Disseminator diss) {
+    private static Set<String> getBindingKeyAssignments(Disseminator diss) {
         Set<String> set = new HashSet<String>();
         for (DSBinding binding : diss.dsBindMap.dsBindings) {
             set.add(binding.bindKeyName + "=" + binding.datastreamID);
@@ -165,66 +245,142 @@ public class DefaultClassifier implements Classifier {
         return set;
     }
 
-    private Set<String> getDatastreamIDConstraints(DigitalObject obj) {
-        if (using(Aspect.DATASTREAM_IDS)) {
-            // TODO: return the info from the object
-            return null;
-        } else {
-            return null;
+    private static Set<String> getDatastreamIDs(DigitalObject obj) {
+        Set<String> set = new HashSet<String>();
+        Iterator dsIDs = obj.datastreamIdIterator();
+        while (dsIDs.hasNext()) {
+            set.add((String) dsIDs.next());
         }
+        return set;
     }
 
-    private Map<String, String> getMIMETypeConstraints(DigitalObject obj) {
-        if (using(Aspect.MIME_TYPES)) {
-            // TODO: return the info from the object
-            return null;
-        } else {
-            return null;
+    private static Map<String, String> getMIMETypes(DigitalObject obj) {
+        Map<String, String> map = new HashMap<String, String>();
+        Iterator dsIDs = obj.datastreamIdIterator();
+        while (dsIDs.hasNext()) {
+            String dsID = (String) dsIDs.next();
+            Datastream ds = getLatestDSVersion(obj, dsID);
+            map.put(dsID, ds.DSMIME);
         }
+        return map;
     }
 
-    private Map<String, String> getFormatURIConstraints(DigitalObject obj) {
-        if (using(Aspect.FORMAT_URIS)) {
-            // TODO: return the info from the object
-            return null;
-        } else {
-            return null;
+    private static Map<String, String> getFormatURIs(DigitalObject obj) {
+        Map<String, String> map = new HashMap<String, String>();
+        Iterator dsIDs = obj.datastreamIdIterator();
+        while (dsIDs.hasNext()) {
+            String dsID = (String) dsIDs.next();
+            Datastream ds = getLatestDSVersion(obj, dsID);
+            map.put(dsID, ds.DSFormatURI);
         }
+        return map;
     }
 
-    private Datastream getCModelDS(Signature signature) {
-        DatastreamXMLMetadata ds = new DatastreamXMLMetadata(ENCODING);
-        ds.DatastreamID = CMODEL_DS_ID;
-        ds.DSVersionID = CMODEL_DS_VERSION_ID;
-        ds.DSControlGrp = CMODEL_DS_CONTROL_GROUP;
-        ds.DSLabel = CMODEL_DS_LABEL;
-        ds.DSMIME = CMODEL_DS_MIMETYPE;
-        try {
-            ds.xmlContent = getCModelDSContent(signature).getBytes(ENCODING);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Bad char encoding: " + ENCODING, e);
-        }
-        return ds;
-    }
-
-    private String getCModelDSContent(Signature signature) {
-        // TODO: express signature in DS_COMPOSITE_MODEL format
-        return null;
-    }
-
-    //---
-    // Static helpers
-    //---
-
-    private static Disseminator getLatestDissVersion(DigitalObject obj, String dissID) {
+    private static Disseminator getLatestDissVersion(DigitalObject obj,
+            String dissID) {
         Disseminator latest = null;
         Iterator disses = obj.disseminators(dissID).iterator();
         while (disses.hasNext()) {
             Disseminator diss = (Disseminator) disses.next();
-            if (latest == null || latest.dissCreateDT.getTime() < diss.dissCreateDT.getTime()) {
+            if (latest == null || latest.dissCreateDT.getTime()
+                    < diss.dissCreateDT.getTime()) {
                 latest = diss;
             }
         }
         return latest;
     }
+
+    private static Datastream getLatestDSVersion(DigitalObject obj,
+            String dsID) {
+        Datastream latest = null;
+        Iterator dses = obj.datastreams(dsID).iterator();
+        while (dses.hasNext()) {
+            Datastream ds = (Datastream) dses.next();
+            if (latest == null || latest.DSCreateDT.getTime()
+                    < ds.DSCreateDT.getTime()) {
+                latest = ds;
+            }
+        }
+        return latest;
+    }
+
+    private static void addRelsExtDSIfNeeded(DigitalObject cModelObj,
+            Signature signature) {
+        if (signature.getBDefPIDs() != null
+                && signature.getBDefPIDs().size() > 0) {
+            addInlineDS(cModelObj, RELS_EXT_DS_ID, RELS_EXT_DS_LABEL,
+                    getRelsExtDSContent(signature, cModelObj.getPid()));
+        }
+    }
+
+    private static void addCompModelDSIfNeeded(DigitalObject cModelObj,
+            Signature signature) {
+        if (signature.getDatastreamIDs() != null
+                && signature.getDatastreamIDs().size() > 0) {
+            addInlineDS(cModelObj, COMP_MODEL_DS_ID, COMP_MODEL_DS_LABEL,
+                    getCompModelDSContent(signature));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void addInlineDS(DigitalObject obj, String dsID,
+            String dsLabel, String xml) {
+        DatastreamXMLMetadata ds = new DatastreamXMLMetadata(CHAR_ENCODING);
+        ds.DatastreamID = dsID;
+        ds.DSVersionID = dsID + DS_VERSION_ID_SUFFIX;
+        ds.DSControlGrp = INLINE_DS_CONTROL_GROUP;
+        ds.DSMIME = INLINE_DS_MIME_TYPE;
+        ds.DSLabel = dsLabel;
+        try {
+            ds.xmlContent = xml.getBytes(CHAR_ENCODING);
+            obj.datastreams(dsID).add(ds);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String getRelsExtDSContent(Signature signature,
+            String pid) {
+        StringBuffer out = new StringBuffer();
+        out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri 
+                + "\" xmlns:rel=\"" + Constants.RELS_EXT.uri + "\">\n");
+        out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid
+                + "\">\n");
+        if (signature.getBDefPIDs() != null) {
+            for (String bDefPID : signature.getBDefPIDs()) {
+                out.append("    <rel:" + Constants.RELS_EXT
+                        .HAS_FORMAL_CONTENT_MODEL.localName
+                        + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>\n");
+            }
+        }
+        out.append("  </rdf:Description>");
+        out.append("</rdf:RDF>");
+        return out.toString();
+    }
+
+    private static String getCompModelDSContent(Signature signature) {
+        StringBuffer out = new StringBuffer();
+        out.append("<dsCompositeModel>\n");
+        if (signature.getDatastreamIDs() != null) {
+            for (String dsID : signature.getDatastreamIDs()) {
+                out.append("  <dsTypeModel ID=\"" + dsID + "\">\n");
+                String mimeType = signature.getMIMEType(dsID);
+                String formatURI = signature.getFormatURI(dsID);
+                if (mimeType != null || formatURI != null) {
+                    out.append("    <form");
+                    if (mimeType != null) {
+                        out.append(" MIME=\"" + mimeType + "\"");
+                    }
+                    if (formatURI != null) {
+                        out.append(" FORMAT_URIS=\"" + mimeType + "\"");
+                    }
+                    out.append("/>\n");
+                }
+                out.append("  </dsTypeModel>");
+            }
+        }
+        out.append("</dsCompositeModel>");
+        return out.toString();
+    }
+
 }
