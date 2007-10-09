@@ -24,13 +24,14 @@ import fedora.server.storage.types.Disseminator;
 import fedora.server.storage.types.DSBinding;
 
 /**
- * A configurable <code>Classifier</code> that uses several key aspects of
- * the given objects to assign content models.
+ * A classifier that can use several key aspects of the given objects to
+ * assign content models.
  *
  * @author cwilper@cs.cornell.edu
  */
 public class DefaultClassifier implements Classifier {
 
+    /** The PID generator that will be used if none is specified. */
     public static final String DEFAULT_PID_GENERATOR
             = "fedora.utilities.cmda.analyzer.DefaultPIDGenerator";
 
@@ -75,7 +76,7 @@ public class DefaultClassifier implements Classifier {
      * Constructs an instance using the configuration from the given
      * properties.
      *
-     * <p><b>Aspect Configuration</b>
+     * <p><b>Specifying Aspects</b>
      * <br/>
      * By default, no aspects are considered for the purpose of
      * classification.  If a property is found of the form
@@ -83,7 +84,7 @@ public class DefaultClassifier implements Classifier {
      * defined in the <code>Aspect</code> enum, and the value must be "true" or
      * "false".</p>
      *
-     * <p><b>PIDGenerator Configuration</b>
+     * <p><b>Specifying the PIDGenerator</b>
      * <br/>
      * By default, a built-in PID generator will be used that generates
      * PIDs of the form: <code>demo:GeneratedPID#</code>, where #
@@ -91,6 +92,8 @@ public class DefaultClassifier implements Classifier {
      * <code>pidGenerator</code>, the value specifies the PIDGenerator
      * class to use, and the class must have a constructor that accepts
      * a Properties object for configuration.
+     *
+     * @param props the properties to get the configuration from.
      */
     public DefaultClassifier(Properties props) {
         setAspects(getAspectsFromProperties(props));
@@ -104,7 +107,7 @@ public class DefaultClassifier implements Classifier {
     //---
 
     /**
-     * @{inheritDoc}
+     * {@inheritDoc}
      */
     public DigitalObject getContentModel(DigitalObject obj) {
         return getContentModel(getSignature(obj));
@@ -146,6 +149,9 @@ public class DefaultClassifier implements Classifier {
             return m_contentModels.get(signature);
         } else {
             DigitalObject cModelObj = new BasicDigitalObject();
+            cModelObj.addFedoraObjectType(DigitalObject
+                    .FEDORA_CONTENT_MODEL_OBJECT);
+            cModelObj.setNamespaceMapping(new HashMap());
             cModelObj.setPid(m_pidGen.getNextPID().toString());
             addRelsExtDSIfNeeded(cModelObj, signature);
             addCompModelDSIfNeeded(cModelObj, signature);

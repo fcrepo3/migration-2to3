@@ -47,7 +47,7 @@ public class Signature {
      * exactly match the values given in the parameter (no more, no less).
      *
      * @param origContentModelID    constrains the original content model id.
-     * @param bDefsPIDs             constrains the bdefs used by old-style
+     * @param bDefPIDs              constrains the bdefs used by old-style
      *                              disseminators.
      * @param bMechPIDs             constrains the bmechs used by old-style
      *                              disseminators.

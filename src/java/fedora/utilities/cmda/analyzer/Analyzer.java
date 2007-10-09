@@ -191,6 +191,15 @@ public class Analyzer {
      * Command-line entry point for the analyzer.
      */
     public static void main(String[] args) {
+        // HACK: make DOTranslatorUtility happy
+        System.setProperty("fedoraServerHost", "localhost");
+        System.setProperty("fedoraServerPort", "80");
+        // HACK: make commons-logging happy
+        final String pfx = "org.apache.commons.logging.";
+        if (System.getProperty(pfx + "LogFactory") == null) {
+            System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
+            System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
+        }
         if (args.length != 1) {
             printUsage();
             System.exit(0);
@@ -242,9 +251,25 @@ public class Analyzer {
     public static String getRequiredString(Properties props, String name) {
         String value = props.getProperty(name);
         if (value == null) {
-            throw new RuntimeException("Required property missing: " + name);
+            throw new IllegalArgumentException("Required property missing: "
+                    + name);
         } else {
             return value;
+        }
+    }
+
+    // TODO: put this util method in another class
+    public static int getOptionalInt(Properties props, String name,
+            int defaultValue) {
+        String value = props.getProperty(name);
+        if (value == null) {
+            return defaultValue;
+        } else {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Not an integer: " + value);
+            }
         }
     }
 
