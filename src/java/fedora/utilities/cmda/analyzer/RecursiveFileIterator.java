@@ -2,8 +2,10 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.File;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.Stack;
 
 /**
@@ -16,6 +18,9 @@ public class RecursiveFileIterator implements Iterator<File> {
     /** The current stack of dir entries (where we are in the tree). */
     private final Stack<DirNode> m_stack;
 
+    /** The file/directory filter to use (null if none). */
+    private final FileFilter m_filter;
+
     /** The next file (null when exhausted). */
     private File m_next;
 
@@ -23,15 +28,19 @@ public class RecursiveFileIterator implements Iterator<File> {
      * Constructs an instance.
      *
      * @param baseDir the directory to start from.
+     * @param filter the file/directory filter to use (null if none).
      * @throws IllegalArgumentException if given file is not an existing dir.
      */
-    public RecursiveFileIterator(File baseDir) {
+    public RecursiveFileIterator(File baseDir, FileFilter filter) {
+        m_filter = filter;
         m_stack = new Stack<DirNode>();
         if (!baseDir.isDirectory()) {
             throw new IllegalArgumentException("No such directory: "
                     + baseDir.getPath());
         }
-        m_stack.push(new DirNode(baseDir));
+        if (m_filter != null && filter.accept(baseDir)) {
+            m_stack.push(new DirNode(baseDir));
+        }
         m_next = getNext();
     }
 
@@ -97,7 +106,17 @@ public class RecursiveFileIterator implements Iterator<File> {
         private int m_pos;
 
         public DirNode(File file) {
-            m_children = file.listFiles();
+            if (m_filter == null) {
+                m_children = file.listFiles();
+            } else {
+                Set<File> set = new HashSet<File>();
+                for (File child : file.listFiles()) {
+                    if (m_filter.accept(child)) {
+                        set.add(child);
+                    }
+                }
+                m_children = set.toArray(new File[set.size()]);
+            }
         }
 
         public File nextChild() {

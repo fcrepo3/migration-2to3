@@ -7,6 +7,9 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.log4j.Logger;
 
 import fedora.server.storage.translation.DODeserializer;
@@ -25,9 +28,13 @@ public class DirObjectSource implements ObjectSource {
     public static final String DEFAULT_DESERIALIZER =
             "fedora.server.storage.translation.FOXML1_0DODeserializer";
 
+    /** The file filter that will be used if none is specified. */
+    public static final String DEFAULT_FILE_FILTER =
+            "fedora.utilities.cmda.analyzer.DefaultFileFilter";
+
     /** 
-     * The maximum consecutive unserializable files that will be skipped
-     * before aborting, if unspecified.
+     * The maximum consecutive XML files with deserialization errors that
+     * will be skipped before aborting, if unspecified.
      */
     public static final int DEFAULT_MAXSKIP = 50;
 
@@ -52,9 +59,9 @@ public class DirObjectSource implements ObjectSource {
     /**
      * Constructs an instance.
      */
-    public DirObjectSource(File sourceDir, DODeserializer deserializer,
-            int maxSkip) {
-        m_files = new RecursiveFileIterator(sourceDir);
+    public DirObjectSource(File sourceDir, FileFilter filter, 
+            DODeserializer deserializer, int maxSkip) {
+        m_files = new RecursiveFileIterator(sourceDir, filter);
         m_deserializer = deserializer;
         m_maxSkip = maxSkip;
         m_next = getNext();
@@ -69,6 +76,13 @@ public class DirObjectSource implements ObjectSource {
      * The <code>sourceDir</code> property must name the directory to start
      * from.  The directory must be specified and exist or an
      * <code>IllegalArgumentException</code> will be thrown.</p>
+     *
+     * <p><b>Specifying the File Filter</b>
+     * <br/>
+     * If <code>fileFilter</code> is specified, an instance of the class it
+     * names will be constructed by passing in the given properties to its
+     * Properties (or no-arg) constructor.  Otherwise, the
+     * <code>DEFAULT_FILE_FILTER</code> will be used.</p>
      *
      * <p><b>Specifying the Deserializer</b>
      * <br/>
@@ -86,8 +100,10 @@ public class DirObjectSource implements ObjectSource {
      * @param props the properties to get the configuration from.
      */
     public DirObjectSource(Properties props) {
+        FileFilter filter = (FileFilter) Analyzer.construct(props,
+                "fileFilter", DEFAULT_FILE_FILTER);
         m_files = new RecursiveFileIterator(new File(
-                Analyzer.getRequiredString(props, "sourceDir")));
+                Analyzer.getRequiredString(props, "sourceDir")), filter);
         m_deserializer = (DODeserializer) Analyzer.construct(props,
                 "deserializer", DEFAULT_DESERIALIZER);
         m_maxSkip = Analyzer.getOptionalInt(props, "maxSkip", DEFAULT_MAXSKIP);
@@ -148,16 +164,36 @@ public class DirObjectSource implements ObjectSource {
                         "UTF-8", DOTranslationUtility.DESERIALIZE_INSTANCE);
                 return obj;
             } catch (Exception e) {
-                LOG.warn("Skipping " + file.getPath() + "; can't deserialize",
-                        e);
-                warnings++;
-                if (warnings > m_maxSkip) {
-                    throw new RuntimeException("Too many consecutive files "
-                            + "could not be deserialized; aborting");
+                if (isXML(file)) {
+                    LOG.warn("Skipping " + file.getPath() + "; can't "
+                            + "deserialize", e);
+                    warnings++;
+                    if (warnings > m_maxSkip) {
+                        throw new RuntimeException("Too many consecutive "
+                                + "files could not be deserialized; aborting");
+                    }
+                } else {
+                    LOG.debug("Skipping " + file.getPath() + "; not XML");
                 }
             }
         }
         return null;
+    }
+
+    //---
+    // Static helpers
+    //---
+
+    private boolean isXML(File file) {
+        try {
+            DocumentBuilderFactory factory
+                    = DocumentBuilderFactory.newInstance();
+            DocumentBuilder parser = factory.newDocumentBuilder();
+            parser.parse(file);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
 }

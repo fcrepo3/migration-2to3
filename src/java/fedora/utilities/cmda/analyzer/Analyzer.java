@@ -32,7 +32,7 @@ public class Analyzer {
 
     /** The serializer that will be used if none is specified. */
     public static final String DEFAULT_SERIALIZER
-            = "fedora.server.storage.translation.FOXML1_0DOSerializer";
+            = "fedora.server.storage.translation.FOXML1_1DOSerializer";
 
     /** The object source that will be used if none is specified. */
     public static final String DEFAULT_OBJECT_SOURCE
