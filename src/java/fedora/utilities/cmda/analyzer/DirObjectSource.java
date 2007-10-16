@@ -23,7 +23,7 @@ public class DirObjectSource implements ObjectSource {
 
     /** The deserializer that will be used if none is specified. */
     public static final String DEFAULT_DESERIALIZER =
-            "fedora.server.storage.translation.FOXMLDODeserializer";
+            "fedora.server.storage.translation.FOXML1_0DODeserializer";
 
     /** 
      * The maximum consecutive unserializable files that will be skipped
