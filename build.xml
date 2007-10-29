@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="fedora-utilities" default="release" basedir=".">
+<project name="fedora-utilities" default="dist" basedir=".">
 
   <!-- defines build options and lib paths -->
   <loadproperties srcFile="build.properties"/>
@@ -45,6 +45,11 @@
            target="${target}">
         <compilerarg line="-Xlint:-serial -Xlint:unchecked"/>
     </javac>
+    <copy todir="build/analyzer-classes">
+      <fileset dir="src/java">
+        <include name="**/*.properties"/>
+      </fileset>
+    </copy>
   </target>
 
   <!-- generator-classes -->
