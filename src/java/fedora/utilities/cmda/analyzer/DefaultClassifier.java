@@ -2,6 +2,7 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.UnsupportedEncodingException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -14,11 +15,11 @@ import org.apache.log4j.Logger;
 import fedora.common.Constants;
 
 import fedora.server.storage.types.BasicDigitalObject;
+import fedora.server.storage.types.DSBinding;
 import fedora.server.storage.types.Datastream;
 import fedora.server.storage.types.DatastreamXMLMetadata;
 import fedora.server.storage.types.DigitalObject;
 import fedora.server.storage.types.Disseminator;
-import fedora.server.storage.types.DSBinding;
 
 import fedora.utilities.config.ConfigUtil;
 
@@ -91,7 +92,7 @@ public class DefaultClassifier implements Classifier {
      *
      * <p><b>Specifying Aspects</b>
      * <br/>
-     * By default, no aspects are considered for the purpose of
+     * By default, all aspects are considered for the purpose of
      * classification.  If a property is found of the form
      * <code>use.AspectName</code>, the aspect name must be one of those
      * defined in the <code>{@link Aspect}</code> enum, and the value must 
@@ -134,42 +135,25 @@ public class DefaultClassifier implements Classifier {
         for (Aspect aspect : aspects) {
             logExplicitUse(aspect);
         }
-        if (aspects.contains(Aspect.BINDING_KEY_ASSIGNMENTS)
-                && !aspects.contains(Aspect.BMECH_PIDS)) {
-            logImplicitUse(Aspect.BMECH_PIDS, Aspect.BINDING_KEY_ASSIGNMENTS);
-            aspects.add(Aspect.BMECH_PIDS);
-        }
-        if (aspects.contains(Aspect.BMECH_PIDS)
-                && !aspects.contains(Aspect.BDEF_PIDS)) {
-            logImplicitUse(Aspect.BDEF_PIDS, Aspect.BMECH_PIDS);
-            aspects.add(Aspect.BDEF_PIDS);
-        }
-        if (aspects.contains(Aspect.MIME_TYPES)
-                && !aspects.contains(Aspect.DATASTREAM_IDS)) {
-            logImplicitUse(Aspect.DATASTREAM_IDS, Aspect.MIME_TYPES);
-            aspects.add(Aspect.DATASTREAM_IDS);
-        }
-        if (aspects.contains(Aspect.FORMAT_URIS)
-                && !aspects.contains(Aspect.DATASTREAM_IDS)) {
-            logImplicitUse(Aspect.DATASTREAM_IDS, Aspect.FORMAT_URIS);
-            aspects.add(Aspect.DATASTREAM_IDS);
-        }
+        addImplicit(aspects, Aspect.BINDING_KEY_ASSIGNMENTS, Aspect.BMECH_PIDS);
+        addImplicit(aspects, Aspect.BMECH_PIDS, Aspect.BDEF_PIDS);
+        addImplicit(aspects, Aspect.MIME_TYPES, Aspect.DATASTREAM_IDS);
+        addImplicit(aspects, Aspect.FORMAT_URIS, Aspect.DATASTREAM_IDS);
         m_aspects = aspects;
     }
-
+    
     private DigitalObject getContentModel(Signature signature) {
         if (m_contentModels.containsKey(signature)) {
             return m_contentModels.get(signature);
-        } else {
-            DigitalObject cModelObj = new BasicDigitalObject();
-            cModelObj.addFedoraObjectType(DigitalObject
-                    .FEDORA_CONTENT_MODEL_OBJECT);
-            cModelObj.setPid(m_pidGen.getNextPID().toString());
-            addRelsExtDSIfNeeded(cModelObj, signature);
-            addCompModelDSIfNeeded(cModelObj, signature);
-            m_contentModels.put(signature, cModelObj);
-            return cModelObj;
         }
+        DigitalObject cModelObj = new BasicDigitalObject();
+        cModelObj.addFedoraObjectType(DigitalObject
+                .FEDORA_CONTENT_MODEL_OBJECT);
+        cModelObj.setPid(m_pidGen.getNextPID().toString());
+        addRelsExtDSIfNeeded(cModelObj, signature);
+        addCompModelDSIfNeeded(cModelObj, signature);
+        m_contentModels.put(signature, cModelObj);
+        return cModelObj;
     }
 
     private Signature getSignature(DigitalObject obj) {
@@ -194,6 +178,14 @@ public class DefaultClassifier implements Classifier {
     // Static helpers
     //---
 
+    private static void addImplicit(Set<Aspect> aspects, Aspect cause,
+            Aspect implied) {
+        if (aspects.contains(cause) && !aspects.contains(implied)) {
+            logImplicitUse(implied, cause);
+            aspects.add(implied);
+        }
+    }
+
     private static void logExplicitUse(Aspect explicit) {
         LOG.info("Using '" + explicit.getName() + "' for "
                 + "classification");
@@ -206,13 +198,16 @@ public class DefaultClassifier implements Classifier {
 
     private static Set<Aspect> getAspectsFromProperties(Properties props) {
         Set<Aspect> aspects = new HashSet<Aspect>();
+        aspects.addAll(Arrays.asList(Aspect.values()));
         for (Aspect aspect : Aspect.values()) {
             String name = "use." + aspect.getName();
             String value = props.getProperty(name);
             if (value != null) {
-                if (value.equalsIgnoreCase("true")) {
-                    aspects.add(aspect);
-                } else if (!value.equalsIgnoreCase("false")) {
+                if (value.equalsIgnoreCase("false")) {
+                    LOG.info("Ignoring aspect (if possible): " 
+                            + aspect.getName());
+                    aspects.remove(aspect);
+                } else if (!value.equalsIgnoreCase("true")) {
                     throw new IllegalArgumentException("Boolean property "
                             + "must have value of true or false: " + name);
                 }
@@ -221,6 +216,7 @@ public class DefaultClassifier implements Classifier {
         return aspects;
     }
 
+    @SuppressWarnings("unchecked")
     private static Set<String> getBDefPIDs(DigitalObject obj) {
         Set<String> set = new HashSet<String>();
         Iterator dissIDs = obj.disseminatorIdIterator();
@@ -232,6 +228,7 @@ public class DefaultClassifier implements Classifier {
         return set;
     }
 
+    @SuppressWarnings("unchecked")
     private static Set<String> getBMechPIDs(DigitalObject obj) {
         Set<String> set = new HashSet<String>();
         Iterator dissIDs = obj.disseminatorIdIterator();
@@ -243,6 +240,7 @@ public class DefaultClassifier implements Classifier {
         return set;
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<String, Set<String>> getBindingKeyAssignments(
             DigitalObject obj) {
         Map<String, Set<String>> map = new HashMap<String, Set<String>>();
@@ -263,6 +261,7 @@ public class DefaultClassifier implements Classifier {
         return set;
     }
 
+    @SuppressWarnings("unchecked")
     private static Set<String> getDatastreamIDs(DigitalObject obj) {
         Set<String> set = new HashSet<String>();
         Iterator dsIDs = obj.datastreamIdIterator();
@@ -272,6 +271,7 @@ public class DefaultClassifier implements Classifier {
         return set;
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<String, String> getMIMETypes(DigitalObject obj) {
         Map<String, String> map = new HashMap<String, String>();
         Iterator dsIDs = obj.datastreamIdIterator();
@@ -283,6 +283,7 @@ public class DefaultClassifier implements Classifier {
         return map;
     }
 
+    @SuppressWarnings("unchecked")
     private static Map<String, String> getFormatURIs(DigitalObject obj) {
         Map<String, String> map = new HashMap<String, String>();
         Iterator dsIDs = obj.datastreamIdIterator();
@@ -294,6 +295,7 @@ public class DefaultClassifier implements Classifier {
         return map;
     }
 
+    @SuppressWarnings("unchecked")
     private static Disseminator getLatestDissVersion(DigitalObject obj,
             String dissID) {
         Disseminator latest = null;
@@ -308,6 +310,7 @@ public class DefaultClassifier implements Classifier {
         return latest;
     }
 
+    @SuppressWarnings("unchecked")
     private static Datastream getLatestDSVersion(DigitalObject obj,
             String dsID) {
         Datastream latest = null;

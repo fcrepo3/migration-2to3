@@ -33,9 +33,8 @@ public abstract class ConfigUtil {
         if (value == null) {
             throw new IllegalArgumentException("Required property missing: "
                     + name);
-        } else {
-            return value;
         }
+        return value;
     }
 
     /**
@@ -45,18 +44,44 @@ public abstract class ConfigUtil {
      * @param name property name.
      * @param defaultValue the value to return if the property isn't found.
      * @return the value.
+     * @throws IllegalArgumentException if the value is not a valid integer.
      */
     public static int getOptionalInt(Properties props, String name,
             int defaultValue) {
         String value = props.getProperty(name);
         if (value == null) {
             return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Not an integer: " + value);
+        }
+    }
+  
+    /**
+     * Gets an optional boolean from properties.
+     * 
+     * @param props properties in which to find the value.
+     * @param name property name.
+     * @param defaultValue the value to return if the property isn't found.
+     * @return the value.
+     * @throws IllegalArgumentException if the value is not a valid boolean
+     *         (true or false).
+     */
+    public static boolean getOptionalBoolean(Properties props, String name,
+            boolean defaultValue) {
+        String value = props.getProperty(name);
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value.equalsIgnoreCase("true")) {
+            return true;
+        } else if (value.equalsIgnoreCase("false")) {
+            return false;
         } else {
-            try {
-                return Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not an integer: " + value);
-            }
+            throw new IllegalArgumentException("Must specify true or false "
+                    + "for property: " + name);
         }
     }
 
@@ -77,7 +102,7 @@ public abstract class ConfigUtil {
             className = defaultClassName;
         }
         try {
-            Class clazz = Class.forName(className);
+            Class<?> clazz = Class.forName(className);
             return clazz.getConstructor(Properties.class).newInstance(props);
         } catch (NoSuchMethodException e) {
             try {
@@ -98,12 +123,10 @@ public abstract class ConfigUtil {
             Throwable cause = th.getCause();
             if (cause instanceof RuntimeException) {
                 throw (RuntimeException) cause;
-            } else {
-                throw new RuntimeException(message, th.getCause());
             }
-        } else {
-            throw new RuntimeException(message, th);
+            throw new RuntimeException(message, th.getCause());
         }
+        throw new RuntimeException(message, th);
     }
  
 

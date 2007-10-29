@@ -19,6 +19,7 @@ import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.file.FileUtil;
 
 import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
 
@@ -51,6 +52,13 @@ public class Analyzer {
      * <code>outputDir</code>
      */
     public static final String OUTPUT_DIR_PROPERTY = "outputDir";
+
+    /**
+     * The property indicating whether to clear the output directory
+     * if it contains files prior to running classification;
+     * <code>clearOutputDir</code>
+     */
+    public static final String CLEAR_OUTPUT_DIR_PROPERTY = "clearOutputDir";
 
     /**
      * The property indicating which serializer to use;
@@ -174,12 +182,16 @@ public class Analyzer {
      *
      * @param objects iterator of objects to classify.
      * @param outputDir the directory to send output to.  It must not contain
-     *                  any files.  If it doesn't yet exist, it will be
-     *                  created.
+     *        any files.  If it doesn't yet exist, it will be created.
+     * @param clearOutputDir if the output directory contains files, and this
+     *        is true, they will be automatically deleted before classification
+     *        begins.
      */
-    public void classifyAll(ObjectSource objects, File outputDir) {
+    public void classifyAll(ObjectSource objects, File outputDir,
+            boolean clearOutputDir) {
         clearState();
-        setOutputDir(outputDir);
+        setOutputDir(outputDir, clearOutputDir);
+        LOG.info("Classification started.");
         try {
             while (objects.hasNext()) {
                 DigitalObject object = objects.next();
@@ -188,6 +200,8 @@ public class Analyzer {
             }
             serializeCModels();
         } finally {
+            LOG.info("Classification finished.");
+            LOG.info("Output is in directory: " + outputDir.getPath());
             closeMemberLists();
         }
     }
@@ -248,7 +262,7 @@ public class Analyzer {
         m_memberLists.clear();
     }
 
-    private void setOutputDir(File outputDir) {
+    private void setOutputDir(File outputDir, boolean clearOutputDir) {
         if (!outputDir.exists()) {
             outputDir.mkdir();
             if (!outputDir.exists()) {
@@ -257,8 +271,12 @@ public class Analyzer {
             }
         }
         if (outputDir.listFiles().length != 0) {
-            throw new RuntimeException(Messages.ERR_DIR_NONEMPTY
-                    + outputDir.getPath());
+            if (clearOutputDir) {
+                FileUtil.clearDirectory(outputDir, true);
+            } else {
+                throw new RuntimeException(Messages.ERR_DIR_NONEMPTY
+                        + outputDir.getPath());
+            }
         }
         m_outputDir = outputDir;
     }
@@ -309,7 +327,9 @@ public class Analyzer {
                         OBJECT_SOURCE_PROPERTY, DEFAULT_OBJECT_SOURCE);
                 String outputDir = ConfigUtil.getRequiredString(props,
                         OUTPUT_DIR_PROPERTY);
-                analyzer.classifyAll(source, new File(outputDir));
+                analyzer.classifyAll(source, new File(outputDir),
+                        ConfigUtil.getOptionalBoolean(props,
+                        CLEAR_OUTPUT_DIR_PROPERTY, false));
             } catch (FileNotFoundException e) {
                 LOG.error(Messages.ERR_CONFIG_NOT_FOUND + args[0]);
                 System.exit(1);

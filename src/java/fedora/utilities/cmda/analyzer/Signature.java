@@ -128,9 +128,8 @@ public class Signature {
     public Set<String> getBindingKeyAssignments(String bMechPID) {
         if (m_bindingKeyAssignments == null) {
             return null;
-        } else {
-            return m_bindingKeyAssignments.get(bMechPID);
         }
+        return m_bindingKeyAssignments.get(bMechPID);
     }
 
     /**
@@ -154,9 +153,8 @@ public class Signature {
     public String getMIMEType(String datastreamID) {
         if (m_mimeTypes == null) {
             return null;
-        } else {
-            return m_mimeTypes.get(datastreamID);
         }
+        return m_mimeTypes.get(datastreamID);
     }
 
     /**
@@ -170,9 +168,8 @@ public class Signature {
     public String getFormatURI(String datastreamID) {
         if (m_formatURIs == null) {
             return null;
-        } else {
-            return m_formatURIs.get(datastreamID);
         }
+        return m_formatURIs.get(datastreamID);
     }
 
     //---
@@ -186,44 +183,14 @@ public class Signature {
     public boolean equals(Object o) {
         if (o instanceof Signature && this.getClass().equals(o.getClass())) {
             Signature s = (Signature) o;
-            if (!equals(m_origContentModelID, s.getOrigContentModelID())) {
-                return false;
-            }
-            if (!equals(m_bDefPIDs, s.getBDefPIDs())) {
-                return false;
-            }
-            if (!equals(m_bMechPIDs, s.getBMechPIDs())) {
-                return false;
-            }
-            if (m_bMechPIDs != null) {
-                for (String bMechPID : m_bMechPIDs) {
-                    if (!equals(getBindingKeyAssignments(bMechPID),
-                            s.getBindingKeyAssignments(bMechPID))) {
-                        return false;
-                    }
-                }
-            }
-            if (!equals(m_datastreamIDs, s.getDatastreamIDs())) {
-                return false;
-            }
-            if (m_datastreamIDs != null) {
-                for (String datastreamID : m_datastreamIDs) {
-                    if (!equals(getMIMEType(datastreamID),
-                            s.getMIMEType(datastreamID))) {
-                        return false;
-                    }
-                    if (!equals(getFormatURI(datastreamID),
-                            s.getFormatURI(datastreamID))) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        } else {
-            return false;
+            return equals(m_origContentModelID, s.getOrigContentModelID())
+                    && equals(m_bDefPIDs, s.getBDefPIDs())
+                    && sameBMechDetails(s)
+                    && sameDatastreamDetails(s);
         }
+        return false;
     }
-
+    
     /**
      * {@inheritDoc}
      */
@@ -235,6 +202,46 @@ public class Signature {
     }
 
     //---
+    // Instance helpers
+    //---
+    
+    private boolean sameBMechDetails(Signature s) {
+        if (m_bMechPIDs == null) {
+            return s.getBMechPIDs() == null;
+        } else if (s.getBMechPIDs() == null) {
+            return false;
+        } else {
+            for (String bMechPID : m_bMechPIDs) {
+                if (!equals(getBindingKeyAssignments(bMechPID),
+                        s.getBindingKeyAssignments(bMechPID))) {
+                    return false;
+                }
+            }
+            return m_bMechPIDs.equals(s.getBMechPIDs());
+        }
+    }
+    
+    private boolean sameDatastreamDetails(Signature s) {
+        if (m_datastreamIDs == null) {
+            return s.getDatastreamIDs() == null;
+        } else if (s.getDatastreamIDs() == null) {
+            return false;
+        } else {
+            for (String datastreamID : m_datastreamIDs) {
+                if (!equals(getMIMEType(datastreamID),
+                        s.getMIMEType(datastreamID))) {
+                    return false;
+                }
+                if (!equals(getFormatURI(datastreamID),
+                        s.getFormatURI(datastreamID))) {
+                    return false;
+                }
+            }
+            return m_datastreamIDs.equals(s.getDatastreamIDs());
+        }
+    }
+
+    //---
     // Static helpers
     //---
 
@@ -242,7 +249,7 @@ public class Signature {
      * Gives the sum of the hash codes of the given objects.
      * Objects given as null will be skipped.
      */
-    private int addHashCodes(Object... objects) {
+    private static int addHashCodes(Object... objects) {
         int sum = 0;
         for (Object o : objects) {
             if (o != null) {

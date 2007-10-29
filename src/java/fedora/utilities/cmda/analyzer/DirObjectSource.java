@@ -139,11 +139,10 @@ public class DirObjectSource implements ObjectSource {
     public DigitalObject next() {
         if (m_next == null) {
             throw new NoSuchElementException("Iterator exhausted");
-        } else {
-            DigitalObject current = m_next;
-            m_next = getNext();
-            return current;
         }
+        DigitalObject current = m_next;
+        m_next = getNext();
+        return current;
     }
 
     /**

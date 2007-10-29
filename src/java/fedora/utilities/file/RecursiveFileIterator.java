@@ -62,11 +62,10 @@ public class RecursiveFileIterator implements Iterator<File> {
     public File next() {
         if (m_next == null) {
             throw new NoSuchElementException("Iterator exhausted");
-        } else {
-            File current = m_next;
-            m_next = getNext();
-            return current;
         }
+        File current = m_next;
+        m_next = getNext();
+        return current;
     }
 
     /**
@@ -125,9 +124,8 @@ public class RecursiveFileIterator implements Iterator<File> {
         public File nextChild() {
             if (m_pos >= m_children.length) {
                 return null;
-            } else {
-                return m_children[m_pos++];
             }
+            return m_children[m_pos++];
         }
     }
 
