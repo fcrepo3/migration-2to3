@@ -101,6 +101,7 @@ public abstract class ConfigUtil {
         if (className == null) {
             className = defaultClassName;
         }
+        // CHECKSTYLE:OFF
         try {
             Class<?> clazz = Class.forName(className);
             return clazz.getConstructor(Properties.class).newInstance(props);
@@ -113,12 +114,13 @@ public abstract class ConfigUtil {
         } catch (Throwable th) {
             throw constructionFailed(className, th);
         }
+        // CHECKSTYLE:ON
     }
     
     private static RuntimeException constructionFailed(String className,
             Throwable th) {
         String message = "Error constructing class: " + className;
-        LOG.debug(message, th); // so we have a chance to see the full trace
+        LOG.debug(message, th);
         if (th instanceof InvocationTargetException) {
             Throwable cause = th.getCause();
             if (cause instanceof RuntimeException) {

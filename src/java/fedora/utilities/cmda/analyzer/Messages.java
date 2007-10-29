@@ -14,7 +14,7 @@ import java.util.ResourceBundle;
 abstract class Messages {
    
     /** The <code>ResourceBundle</code> containing all messages. */
-    private static final ResourceBundle BUNDLE = loadBundle();
+    public static final ResourceBundle BUNDLE = loadBundle();
     
     //---
     // Informative messages

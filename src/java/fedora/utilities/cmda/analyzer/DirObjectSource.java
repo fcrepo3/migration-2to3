@@ -3,15 +3,19 @@ package fedora.utilities.cmda.analyzer;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.IOException;
 
 import java.util.NoSuchElementException;
 import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.log4j.Logger;
+import org.xml.sax.SAXException;
 
+import fedora.server.errors.ServerException;
 import fedora.server.storage.translation.DODeserializer;
 import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.BasicDigitalObject;
@@ -159,7 +163,9 @@ public class DirObjectSource implements ObjectSource {
     /**
      * {@inheritDoc}
      */
-    public void close() { }
+    public void close() {
+        // no-op
+    }
 
     //---
     // Instance helpers
@@ -169,23 +175,30 @@ public class DirObjectSource implements ObjectSource {
         int warnings = 0;
         while (m_files.hasNext()) {
             File file = m_files.next();
+            Exception err = null;
             try {
                 DigitalObject obj = new BasicDigitalObject();
                 m_deserializer.deserialize(
                         new FileInputStream(file), obj, CHAR_ENCODING,
                         DOTranslationUtility.DESERIALIZE_INSTANCE);
                 return obj;
-            } catch (Exception e) {
-                if (isXML(file)) {
-                    LOG.warn("Skipping " + file.getPath() + "; can't "
-                            + "deserialize", e);
-                    warnings++;
-                    if (warnings > m_maxSkip) {
-                        throw new RuntimeException("Too many consecutive "
-                                + "files could not be deserialized; aborting");
+            } catch (IOException e) {
+                err = e;
+            } catch (ServerException e) {
+                err = e;
+            } finally {
+                if (err != null) {
+                    if (isXML(file)) {
+                        LOG.warn("Skipping " + file.getPath() + "; can't "
+                                + "deserialize", err);
+                        warnings++;
+                        if (warnings > m_maxSkip) {
+                            throw new RuntimeException("Too many consecutive "
+                                    + "files not readable; aborting");
+                        }
+                    } else {
+                        LOG.debug("Skipping " + file.getPath() + "; not XML");
                     }
-                } else {
-                    LOG.debug("Skipping " + file.getPath() + "; not XML");
                 }
             }
         }
@@ -203,7 +216,11 @@ public class DirObjectSource implements ObjectSource {
             DocumentBuilder parser = factory.newDocumentBuilder();
             parser.parse(file);
             return true;
-        } catch (Exception e) {
+        } catch (IOException e) {
+            return false;
+        } catch (ParserConfigurationException e) {
+            return false;
+        } catch (SAXException e) {
             return false;
         }
     }

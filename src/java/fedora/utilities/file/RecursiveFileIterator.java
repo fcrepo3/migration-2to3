@@ -39,8 +39,8 @@ public class RecursiveFileIterator implements Iterator<File> {
             throw new IllegalArgumentException("No such directory: "
                     + baseDir.getPath());
         }
-        if (m_filter != null && filter.accept(baseDir)) {
-            m_stack.push(new DirNode(baseDir));
+        if (m_filter == null || m_filter.accept(baseDir)) {
+            m_stack.push(new DirNode(baseDir, m_filter));
         }
         m_next = getNext();
     }
@@ -85,7 +85,7 @@ public class RecursiveFileIterator implements Iterator<File> {
             File child = node.nextChild();
             if (child != null) {
                 if (child.isDirectory()) {
-                    m_stack.push(new DirNode(child));
+                    m_stack.push(new DirNode(child, m_filter));
                 } else {
                     return child;
                 }
@@ -107,13 +107,13 @@ public class RecursiveFileIterator implements Iterator<File> {
         /** Current iteration state, zero-based. */
         private int m_pos;
 
-        public DirNode(File file) {
-            if (m_filter == null) {
+        public DirNode(File file, FileFilter filter) {
+            if (filter == null) {
                 m_children = file.listFiles();
             } else {
                 Set<File> set = new HashSet<File>();
                 for (File child : file.listFiles()) {
-                    if (m_filter.accept(child)) {
+                    if (filter.accept(child)) {
                         set.add(child);
                     }
                 }

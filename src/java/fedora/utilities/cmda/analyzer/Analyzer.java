@@ -14,6 +14,8 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import fedora.server.errors.ObjectIntegrityException;
+import fedora.server.errors.StreamIOException;
 import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.DigitalObject;
@@ -192,17 +194,21 @@ public class Analyzer {
         clearState();
         setOutputDir(outputDir, clearOutputDir);
         LOG.info("Classification started.");
+        int objectCount = 0;
         try {
             while (objects.hasNext()) {
                 DigitalObject object = objects.next();
                 DigitalObject cModel = m_classifier.getContentModel(object);
                 recordMembership(object, cModel);
+                objectCount++;
             }
             serializeCModels();
         } finally {
-            LOG.info("Classification finished.");
-            LOG.info("Output is in directory: " + outputDir.getPath());
             closeMemberLists();
+            LOG.info("Classification finished.");
+            LOG.info("Total objects analyzed: " + objectCount);
+            LOG.info("Total content models generated: " + m_cModelCount);
+            LOG.info("Output is in directory: " + outputDir.getPath());
         }
     }
     
@@ -213,21 +219,27 @@ public class Analyzer {
     private void serializeCModels() {
         for (DigitalObject object : m_cModelNumber.keySet()) {
             int num = m_cModelNumber.get(object).intValue();
-            File file = new File(m_outputDir, CMODEL_PREFIX + num
-                    + CMODEL_SUFFIX);
+            String cModelFilename = CMODEL_PREFIX + num + CMODEL_SUFFIX;
+            File file = new File(m_outputDir, cModelFilename);
+            LOG.info("Serializing content model " + num + "/" 
+                    + m_cModelCount + " to " + cModelFilename);
             FileOutputStream out = null;
             try {
                 out = new FileOutputStream(file);
                 m_serializer.getInstance().serialize(
                         object, out, CHAR_ENCODING, 
                         DOTranslationUtility.SERIALIZE_EXPORT_MIGRATE);
-            } catch (Exception e) {
+            } catch (ObjectIntegrityException e) {
+                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
+            } catch (StreamIOException e) {
+                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
+            } catch (IOException e) {
                 throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
             } finally {
                 if (out != null) {
                     try {
                         out.close();
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         LOG.error(Messages.ERR_CLOSE_FILE_FAILED
                                 + file.getPath());
                     }
@@ -336,7 +348,9 @@ public class Analyzer {
             } catch (IllegalArgumentException e) {
                 LOG.error(e.getMessage());
                 System.exit(1);
+                // CHECKSTYLE:OFF
             } catch (Throwable th) {
+                // CHECKSTYLE:ON
                 LOG.error(Messages.ERR_ANALYSIS_FAILED, th);
                 System.exit(1);
             }

@@ -35,6 +35,7 @@ public class Signature {
      * Constructs a signature with no constraints.
      */
     public Signature() {
+        // no-op
     }
 
     /**
@@ -175,6 +176,39 @@ public class Signature {
     //---
     // Object overrides
     //---
+   
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        StringBuffer out = new StringBuffer();
+        out.append("origContentModelID:\n  " + m_origContentModelID + "\n");
+        out.append("bDefPIDs:\n  " + listStrings(m_bDefPIDs) + "\n");
+        out.append("bMechPIDs:\n  " + listStrings(m_bMechPIDs) + "\n"); 
+        out.append("bindingKeyAssignments:\n  ");
+        if (m_bindingKeyAssignments == null) {
+            out.append("<unconstrained>\n");
+        } else {
+            for (String pid : m_bDefPIDs) {
+                out.append("TODO:finish this");
+                // TODO: finish this
+                Set<String> assignments = null;
+            }
+        }
+        return out.toString();
+    }
+    
+    private static String listStrings(Set<String> set) {
+        if (set == null) {
+            return "<unconstrained>";
+        }
+        StringBuffer out = new StringBuffer();
+        for (String string : set) {
+            out.append(string + " ");
+        }
+        return out.toString();
+    }
 
     /**
      * {@inheritDoc}

@@ -15,6 +15,7 @@ public class DefaultFileFilter implements FileFilter {
      * Creates an instance.
      */
     public DefaultFileFilter() {
+        // no-op
     }
 
     //---
