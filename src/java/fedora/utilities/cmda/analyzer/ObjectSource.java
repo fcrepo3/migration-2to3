@@ -7,7 +7,7 @@ import fedora.server.storage.types.DigitalObject;
 /**
  * Interface for iterating a set of Fedora objects.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public interface ObjectSource extends Iterator<DigitalObject> {
 

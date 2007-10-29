@@ -1,9 +1,9 @@
 package fedora.utilities.cmda.analyzer;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 
@@ -17,10 +17,15 @@ import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.DigitalObject;
 
+import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.file.RecursiveFileIterator;
+
+import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
+
 /**
  * An object source that crawls a directory looking for Fedora objects.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public class DirObjectSource implements ObjectSource {
 
@@ -58,6 +63,12 @@ public class DirObjectSource implements ObjectSource {
 
     /**
      * Constructs an instance.
+     * 
+     * @param sourceDir directory to start from.
+     * @param filter the file filter to use, null if none.
+     * @param deserializer the deserializer to use.
+     * @param maxSkip the max consecutive unserializable files skipped before
+     *        aborting.
      */
     public DirObjectSource(File sourceDir, FileFilter filter, 
             DODeserializer deserializer, int maxSkip) {
@@ -100,13 +111,14 @@ public class DirObjectSource implements ObjectSource {
      * @param props the properties to get the configuration from.
      */
     public DirObjectSource(Properties props) {
-        FileFilter filter = (FileFilter) Analyzer.construct(props,
+        FileFilter filter = (FileFilter) ConfigUtil.construct(props,
                 "fileFilter", DEFAULT_FILE_FILTER);
         m_files = new RecursiveFileIterator(new File(
-                Analyzer.getRequiredString(props, "sourceDir")), filter);
-        m_deserializer = (DODeserializer) Analyzer.construct(props,
+                ConfigUtil.getRequiredString(props, "sourceDir")), filter);
+        m_deserializer = (DODeserializer) ConfigUtil.construct(props,
                 "deserializer", DEFAULT_DESERIALIZER);
-        m_maxSkip = Analyzer.getOptionalInt(props, "maxSkip", DEFAULT_MAXSKIP);
+        m_maxSkip = ConfigUtil.getOptionalInt(props, "maxSkip",
+                DEFAULT_MAXSKIP);
         m_next = getNext();
     }
 
@@ -160,8 +172,9 @@ public class DirObjectSource implements ObjectSource {
             File file = m_files.next();
             try {
                 DigitalObject obj = new BasicDigitalObject();
-                m_deserializer.deserialize(new FileInputStream(file), obj,
-                        "UTF-8", DOTranslationUtility.DESERIALIZE_INSTANCE);
+                m_deserializer.deserialize(
+                        new FileInputStream(file), obj, CHAR_ENCODING,
+                        DOTranslationUtility.DESERIALIZE_INSTANCE);
                 return obj;
             } catch (Exception e) {
                 if (isXML(file)) {

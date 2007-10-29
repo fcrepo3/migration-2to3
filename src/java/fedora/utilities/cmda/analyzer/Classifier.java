@@ -5,7 +5,7 @@ import fedora.server.storage.types.DigitalObject;
 /**
  * Interface for classifying Fedora objects based on their content.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public interface Classifier {
 

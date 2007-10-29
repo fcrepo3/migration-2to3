@@ -1,6 +1,7 @@
-package fedora.utilities.cmda.analyzer;
+package fedora.utilities.file;
 
 import java.io.File;
+import java.io.FileFilter;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -11,7 +12,7 @@ import java.util.Stack;
 /**
  * An iterator that crawls a directory looking for files.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public class RecursiveFileIterator implements Iterator<File> {
 
@@ -101,8 +102,10 @@ public class RecursiveFileIterator implements Iterator<File> {
      */
     private class DirNode {
 
+        /** Directories and files directly beneath this directory. */
         private File[] m_children;
 
+        /** Current iteration state, zero-based. */
         private int m_pos;
 
         public DirNode(File file) {

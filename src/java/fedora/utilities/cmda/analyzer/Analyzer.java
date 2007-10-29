@@ -18,28 +18,93 @@ import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.DigitalObject;
 
+import fedora.utilities.config.ConfigUtil;
+
+import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
+
 /**
  * Utility for analyzing a set of Fedora objects and outputting content
  * model objects and membership lists.
- *
- * @author cwilper@cs.cornell.edu
+ * 
+ * @author Chris Wilper
  */
 public class Analyzer {
+   
+    //---
+    // Property names
+    //---
+    
+    /**
+     * The property indicating which classifier to use;
+     * <code>classifier</code>
+     */
+    public static final String CLASSIFIER_PROPERTY = "classifier";
 
-    /** The classifier that will be used if none is specified. */
+    /**
+     * The property indicating which object source to use;
+     * <code>objectSource</code>
+     */
+    public static final String OBJECT_SOURCE_PROPERTY = "objectSource";
+    
+    /**
+     * The property indicating which output directory to use:
+     * <code>outputDir</code>
+     */
+    public static final String OUTPUT_DIR_PROPERTY = "outputDir";
+
+    /**
+     * The property indicating which serializer to use;
+     * <code>serializer</code>
+     */
+    public static final String SERIALIZER_PROPERTY = "serializer";
+
+    //---
+    // Property defaults
+    //---
+    
+    /**
+     * The classifier that will be used if none is specified;
+     * <code>fedora.utilities.cmda.analyzer.DefaultClassifier</code>
+     */
     public static final String DEFAULT_CLASSIFIER
             = "fedora.utilities.cmda.analyzer.DefaultClassifier";
 
-    /** The serializer that will be used if none is specified. */
-    public static final String DEFAULT_SERIALIZER
-            = "fedora.server.storage.translation.FOXML1_1DOSerializer";
-
-    /** The object source that will be used if none is specified. */
+    /**
+     * The object source that will be used if none is specified;
+     * <code>fedora.utilities.cmda.analyzer.DirObjectSource</code>
+     */
     public static final String DEFAULT_OBJECT_SOURCE
             = "fedora.utilities.cmda.analyzer.DirObjectSource";
 
+    /**
+     * The serializer that will be used if none is specified;
+     * <code>fedora.server.storage.translation.FOXML1_1DOSerializer</code>
+     */
+    public static final String DEFAULT_SERIALIZER
+            = "fedora.server.storage.translation.FOXML1_1DOSerializer";
+    
+    //---
+    // Private constants
+    //---
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Analyzer.class);
+   
+    /** Prefix for generated content model object filenames. */
+    private static final String CMODEL_PREFIX = "cmodel-";
+    
+    /** Suffix for generated content model object filenames. */
+    private static final String CMODEL_SUFFIX = ".xml";
+
+    /** Prefix for content model membership list filenames. */
+    private static final String MEMBER_PREFIX = "cmodel-";
+    
+    /** Suffix for content model membership list filenames. */
+    private static final String MEMBER_SUFFIX = ".members.txt";
+
+    //---
+    // Instance variables
+    //---
 
     /** The classifier this instance uses. */
     private Classifier m_classifier;
@@ -58,6 +123,10 @@ public class Analyzer {
 
     /** Map of content model to the PrintWriter for the list of members. */
     private Map<DigitalObject, PrintWriter> m_memberLists;
+
+    //---
+    // Constructors
+    //---
 
     /**
      * Constructs an analyzer.
@@ -89,11 +158,15 @@ public class Analyzer {
      * @param props the properties to get configuration from.
      */
     public Analyzer(Properties props) {
-        m_classifier = (Classifier) Analyzer.construct(props, "classifier",
-                DEFAULT_CLASSIFIER);
-        m_serializer = (DOSerializer) Analyzer.construct(props, "serializer",
-                DEFAULT_SERIALIZER);
+        m_classifier = (Classifier) ConfigUtil.construct(props,
+                CLASSIFIER_PROPERTY, DEFAULT_CLASSIFIER);
+        m_serializer = (DOSerializer) ConfigUtil.construct(props,
+                SERIALIZER_PROPERTY, DEFAULT_SERIALIZER);
     }
+    
+    //---
+    // Public interface
+    //---
 
     /**
      * Iterates the given objects, classifying them and sending output
@@ -118,22 +191,32 @@ public class Analyzer {
             closeMemberLists();
         }
     }
+    
+    //---
+    // Instance helpers
+    //---
 
     private void serializeCModels() {
         for (DigitalObject object : m_cModelNumber.keySet()) {
             int num = m_cModelNumber.get(object).intValue();
-            File file = new File(m_outputDir, "cmodel-" + num + ".xml");
+            File file = new File(m_outputDir, CMODEL_PREFIX + num
+                    + CMODEL_SUFFIX);
             FileOutputStream out = null;
             try {
                 out = new FileOutputStream(file);
                 m_serializer.getInstance().serialize(
-                        object, out, "UTF-8", 
+                        object, out, CHAR_ENCODING, 
                         DOTranslationUtility.SERIALIZE_EXPORT_MIGRATE);
             } catch (Exception e) {
-                throw new RuntimeException("Error writing cmodel", e);
+                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
             } finally {
                 if (out != null) {
-                    try { out.close(); } catch (Exception e) { }
+                    try {
+                        out.close();
+                    } catch (Exception e) {
+                        LOG.error(Messages.ERR_CLOSE_FILE_FAILED
+                                + file.getPath());
+                    }
                 }
             }
         }
@@ -148,11 +231,11 @@ public class Analyzer {
             try {
                 writer = new PrintWriter(new OutputStreamWriter(
                         new FileOutputStream(
-                                new File(m_outputDir, "cmodel-"
-                                        + m_cModelCount + ".members.txt"))));
+                                new File(m_outputDir, MEMBER_PREFIX
+                                        + m_cModelCount + MEMBER_SUFFIX))));
                 m_memberLists.put(cModel, writer);
             } catch (IOException e) {
-                throw new RuntimeException("Error writing file", e);
+                throw new RuntimeException(Messages.ERR_WRITE_FILE_FAILED, e);
             }
         }
         writer.println(object.getPid());
@@ -169,13 +252,12 @@ public class Analyzer {
         if (!outputDir.exists()) {
             outputDir.mkdir();
             if (!outputDir.exists()) {
-                throw new RuntimeException(
-                        "Unable to create output directory: "
+                throw new RuntimeException(Messages.ERR_MKDIR_FAILED
                         + outputDir.getPath());
             }
         }
         if (outputDir.listFiles().length != 0) {
-            throw new RuntimeException("Output directory is not empty: "
+            throw new RuntimeException(Messages.ERR_DIR_NONEMPTY
                     + outputDir.getPath());
         }
         m_outputDir = outputDir;
@@ -186,9 +268,15 @@ public class Analyzer {
         m_cModelNumber = new HashMap<DigitalObject, Integer>();
         m_cModelCount = 0;
     }
-
+    
+    //---
+    // Command-line
+    //---
+    
     /**
      * Command-line entry point for the analyzer.
+     * 
+     * @param args command-line arguments.
      */
     public static void main(String[] args) {
         // HACK: make DOTranslatorUtility happy
@@ -201,11 +289,11 @@ public class Analyzer {
             System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
         }
         if (args.length != 1) {
-            printUsage();
+            System.out.println(Messages.ANALYZER_USAGE);
             System.exit(0);
         } else {
             if (args[0].equals("--help")) {
-                printHelp();
+                System.out.println(Messages.ANALYZER_HELP);
                 System.exit(0);
             }
             try {
@@ -217,83 +305,21 @@ public class Analyzer {
                     props.load(new FileInputStream(args[0]));
                 }
                 Analyzer analyzer = new Analyzer(props);
-                ObjectSource source = (ObjectSource) Analyzer.construct(props,
-                        "objectSource", DEFAULT_OBJECT_SOURCE);
-                String outputDir = getRequiredString(props, "outputDir");
+                ObjectSource source = (ObjectSource) ConfigUtil.construct(props,
+                        OBJECT_SOURCE_PROPERTY, DEFAULT_OBJECT_SOURCE);
+                String outputDir = ConfigUtil.getRequiredString(props,
+                        OUTPUT_DIR_PROPERTY);
                 analyzer.classifyAll(source, new File(outputDir));
             } catch (FileNotFoundException e) {
-                LOG.error("Configuration file not found: " + args[0]);
+                LOG.error(Messages.ERR_CONFIG_NOT_FOUND + args[0]);
+                System.exit(1);
+            } catch (IllegalArgumentException e) {
+                LOG.error(e.getMessage());
                 System.exit(1);
             } catch (Throwable th) {
-                LOG.error("Analysis failed due to the following unexpected "
-                        + "error", th);
+                LOG.error(Messages.ERR_ANALYSIS_FAILED, th);
                 System.exit(1);
             }
         }
     }
-
-    private static void printUsage() {
-        System.out.println("Usage: 1) java -jar analyzer.jar config.properties");
-        System.out.println("   Or: 2) java -jar analyzer.jar --");
-        System.out.println("   Or: 3) java -jar analyzer.jar --help");
-        System.out.println();
-        System.out.println("Usage 1 runs analysis with configuration from the given file.");
-        System.out.println("Usage 2 runs analysis with configuration from system properties.");
-        System.out.println("Usage 3 prints examples and configuration details.");
-    }
-
-    private static void printHelp() {
-        // TODO: print examples and configuration details
-        System.out.println("You can't be helped.");
-    }
-
-    // TODO: put this util method in another class
-    public static String getRequiredString(Properties props, String name) {
-        String value = props.getProperty(name);
-        if (value == null) {
-            throw new IllegalArgumentException("Required property missing: "
-                    + name);
-        } else {
-            return value;
-        }
-    }
-
-    // TODO: put this util method in another class
-    public static int getOptionalInt(Properties props, String name,
-            int defaultValue) {
-        String value = props.getProperty(name);
-        if (value == null) {
-            return defaultValue;
-        } else {
-            try {
-                return Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not an integer: " + value);
-            }
-        }
-    }
-
-    // TODO: put this util method in another class
-    public static Object construct(Properties props, String propName,
-            String defaultClassName) {
-        String className = props.getProperty(propName);
-        if (className == null) {
-            className = defaultClassName;
-        }
-        try {
-            Class clazz = Class.forName(className);
-            return clazz.getConstructor(Properties.class).newInstance(props);
-        } catch (NoSuchMethodException e) {
-            try {
-                return Class.forName(className).newInstance();
-            } catch (Exception e2) {
-                throw new RuntimeException("Error constructing "
-                        + className + "()", e2);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Error constructing "
-                    + className + "(Properties)", e);
-        }
-    }
-
 }

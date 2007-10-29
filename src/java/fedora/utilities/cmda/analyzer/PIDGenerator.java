@@ -5,7 +5,7 @@ import fedora.common.PID;
 /**
  * Interface for getting new PIDs for generated objects.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public interface PIDGenerator {
 

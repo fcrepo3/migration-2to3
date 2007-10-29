@@ -6,7 +6,7 @@ import java.util.Set;
 /**
  * Describes constraints on Fedora digital objects.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
 public class Signature {
 
@@ -258,11 +258,7 @@ public class Signature {
      */
     private static boolean equals(Object a, Object b) {
         if (a == null) {
-            if (b == null) {
-                return true;
-            } else {
-                return false;
-            }
+            return b == null;
         } else if (b == null) {
             return false;
         } else {

@@ -2,8 +2,6 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.UnsupportedEncodingException;
 
-import java.lang.reflect.Constructor;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -14,7 +12,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import fedora.common.Constants;
-import fedora.common.PID;
 
 import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.Datastream;
@@ -23,12 +20,17 @@ import fedora.server.storage.types.DigitalObject;
 import fedora.server.storage.types.Disseminator;
 import fedora.server.storage.types.DSBinding;
 
+import fedora.utilities.config.ConfigUtil;
+
+import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
+
 /**
  * A classifier that can use several key aspects of the given objects to
  * assign content models.
  *
- * @author cwilper@cs.cornell.edu
+ * @author Chris Wilper
  */
+@SuppressWarnings("deprecation")
 public class DefaultClassifier implements Classifier {
 
     /** The PID generator that will be used if none is specified. */
@@ -39,32 +41,43 @@ public class DefaultClassifier implements Classifier {
     private static final Logger LOG = Logger.getLogger(
             DefaultClassifier.class);
 
-    private static final String CHAR_ENCODING = "UTF-8";
-
+    /** Control group to use for Inline XML datastreams. */
     private static final String INLINE_DS_CONTROL_GROUP = "X";
 
+    /** MIME type to use for Inline XML datastreams. */
     private static final String INLINE_DS_MIME_TYPE = "text/xml";
 
+    /** Datastream version ID suffix. */
     private static final String DS_VERSION_ID_SUFFIX = "1.0";
 
+    /** Datastream ID for composite model datastreams. */
     private static final String COMP_MODEL_DS_ID = "DS-COMPOSITE-MODEL";
 
+    /** Label for composite model datastreams. */
     private static final String COMP_MODEL_DS_LABEL = "DS Composite Model";
 
+    /** Datastream ID for RELS-EXT datastreams. */
     private static final String RELS_EXT_DS_ID = "RELS-EXT";
 
+    /** Label for RELS-EXT datastreams. */
     private static final String RELS_EXT_DS_LABEL = "Relationships";
 
+    /** Aspects used by this instance for the purpose of classification. */
     private Set<Aspect> m_aspects;
 
+    /** The PID generator used by this instance. */
     private PIDGenerator m_pidGen;
 
+    /** Map of content models used for each signature. */
     private Map<Signature, DigitalObject> m_contentModels;
 
     /**
      * Constructs an instance that uses the given aspects for the purpose of
      * classification, and the given generator for the purpose of assigning
      * pids to generated content models.
+     * 
+     * @param aspects aspects to use for classification.
+     * @param pidGen the pid generator to use.
      */
     public DefaultClassifier(Set<Aspect> aspects, PIDGenerator pidGen) {
         setAspects(aspects);
@@ -81,8 +94,8 @@ public class DefaultClassifier implements Classifier {
      * By default, no aspects are considered for the purpose of
      * classification.  If a property is found of the form
      * <code>use.AspectName</code>, the aspect name must be one of those
-     * defined in the <code>Aspect</code> enum, and the value must be "true" or
-     * "false".</p>
+     * defined in the <code>{@link Aspect}</code> enum, and the value must 
+     * be "true" or "false".</p>
      *
      * <p><b>Specifying the PIDGenerator</b>
      * <br/>
@@ -97,7 +110,7 @@ public class DefaultClassifier implements Classifier {
      */
     public DefaultClassifier(Properties props) {
         setAspects(getAspectsFromProperties(props));
-        m_pidGen = (PIDGenerator) Analyzer.construct(props, "pidGen",
+        m_pidGen = (PIDGenerator) ConfigUtil.construct(props, "pidGen",
                 DEFAULT_PID_GENERATOR);
         m_contentModels = new HashMap<Signature, DigitalObject>();
     }
@@ -151,7 +164,6 @@ public class DefaultClassifier implements Classifier {
             DigitalObject cModelObj = new BasicDigitalObject();
             cModelObj.addFedoraObjectType(DigitalObject
                     .FEDORA_CONTENT_MODEL_OBJECT);
-            cModelObj.setNamespaceMapping(new HashMap());
             cModelObj.setPid(m_pidGen.getNextPID().toString());
             addRelsExtDSIfNeeded(cModelObj, signature);
             addCompModelDSIfNeeded(cModelObj, signature);
