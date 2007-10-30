@@ -183,30 +183,73 @@ public class Signature {
     @Override
     public String toString() {
         StringBuffer out = new StringBuffer();
-        out.append("origContentModelID:\n  " + m_origContentModelID + "\n");
-        out.append("bDefPIDs:\n  " + listStrings(m_bDefPIDs) + "\n");
-        out.append("bMechPIDs:\n  " + listStrings(m_bMechPIDs) + "\n"); 
-        out.append("bindingKeyAssignments:\n  ");
-        if (m_bindingKeyAssignments == null) {
-            out.append("<unconstrained>\n");
+        out.append("[Legacy Content Model]\n  ");
+        if (m_origContentModelID == null) {
+            out.append("any");
+        } else if (m_origContentModelID.length() == 0) {
+            out.append("none");
         } else {
-            for (String pid : m_bDefPIDs) {
-                out.append("TODO:finish this");
-                // TODO: finish this
-                Set<String> assignments = null;
+            out.append("'" + m_origContentModelID + "'");
+        }
+        out.append("\n[Behavior Definitions]\n  "
+                + listStrings(m_bDefPIDs));
+        out.append("\n[Behavior Mechanisms]\n  " 
+                + listStrings(m_bMechPIDs));
+        out.append("\n[Binding Key Assignments]");
+        if (m_bindingKeyAssignments == null) {
+            out.append("\n  any");
+        } else {
+            for (String pid : m_bMechPIDs) {
+                out.append("\n  for " + pid + "\n    "
+                        + listStrings(m_bindingKeyAssignments.get(pid)));
+            }
+            if (m_bMechPIDs.size() == 0) {
+                out.append("\n  none");
             }
         }
+        out.append("\n[Datastream IDs]\n  " + listStrings(m_datastreamIDs));
+        appendDSRestrictions("Datastream MIME Type", m_mimeTypes, out);
+        appendDSRestrictions("Datastream Format URI", m_formatURIs, out);
         return out.toString();
+    }
+    
+    private static void appendDSRestrictions(String label,
+            Map<String, String> restrictions, StringBuffer out) {
+        out.append("\n[" + label + "]");
+        if (restrictions == null) {
+            out.append("\n  any");
+        } else {
+            for (String dsID : restrictions.keySet()) {
+                out.append("\n  for " + dsID + ", ");
+                String value = restrictions.get(dsID);
+                if (value == null || value.length() == 0) {
+                    out.append("none");
+                } else {
+                    out.append("'" + value + "'");
+                }
+            }
+        }
     }
     
     private static String listStrings(Set<String> set) {
         if (set == null) {
-            return "<unconstrained>";
+            return "{any}";
+        }
+        if (set.size() == 0) {
+            return "{none}";
         }
         StringBuffer out = new StringBuffer();
+        out.append("{");
+        boolean pastFirst = false;
         for (String string : set) {
-            out.append(string + " ");
+            if (pastFirst) {
+                out.append(", ");
+            } else {
+                pastFirst = true;
+            }
+            out.append("'" + string + "'");
         }
+        out.append("}");
         return out.toString();
     }
 

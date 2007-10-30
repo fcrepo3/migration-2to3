@@ -152,6 +152,13 @@ public class DefaultClassifier implements Classifier {
         cModelObj.setPid(m_pidGen.getNextPID().toString());
         addRelsExtDSIfNeeded(cModelObj, signature);
         addCompModelDSIfNeeded(cModelObj, signature);
+        
+        // TODO: put in another method
+        addInlineDS(cModelObj, "CLASS-DESCRIPTION",
+                "Technical description of the class of objects assigned to"
+                + " this content model", "<description>\n" 
+                + signature.toString() + "\n</description>");
+            
         m_contentModels.put(signature, cModelObj);
         return cModelObj;
     }
@@ -397,7 +404,7 @@ public class DefaultClassifier implements Classifier {
                     }
                     out.append("/>\n");
                 }
-                out.append("  </dsTypeModel>");
+                out.append("  </dsTypeModel>\n");
             }
         }
         out.append("</dsCompositeModel>");
