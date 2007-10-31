@@ -93,10 +93,9 @@ public class DefaultClassifier implements Classifier {
      * <p><b>Specifying Aspects</b>
      * <br/>
      * By default, all aspects are considered for the purpose of
-     * classification.  If a property is found of the form
-     * <code>use.AspectName</code>, the aspect name must be one of those
-     * defined in the <code>{@link Aspect}</code> enum, and the value must 
-     * be "true" or "false".</p>
+     * classification.  To ignore one or more aspects, the <code>ignoreAspects
+     * </code> property should be used.  The value, if specified, should contain
+     * a comma-delimited list of <code>{@link Aspect}</code>s to ignore.
      *
      * <p><b>Specifying the PIDGenerator</b>
      * <br/>
@@ -152,13 +151,10 @@ public class DefaultClassifier implements Classifier {
         cModelObj.setPid(m_pidGen.getNextPID().toString());
         addRelsExtDSIfNeeded(cModelObj, signature);
         addCompModelDSIfNeeded(cModelObj, signature);
-        
-        // TODO: put in another method
         addInlineDS(cModelObj, "CLASS-DESCRIPTION",
                 "Technical description of the class of objects assigned to"
-                + " this content model", "<description>\n" 
-                + signature.toString() + "\n</description>");
-            
+                + " this content model", "<class-description>\n" 
+                + signature.toString() + "\n</class-description>");
         m_contentModels.put(signature, cModelObj);
         return cModelObj;
     }
@@ -194,33 +190,54 @@ public class DefaultClassifier implements Classifier {
     }
 
     private static void logExplicitUse(Aspect explicit) {
-        LOG.info("Using '" + explicit.getName() + "' for "
-                + "classification");
+        LOG.info("Using " + explicit.getName());
     }
 
     private static void logImplicitUse(Aspect implicit, Aspect impliedBy) {
-        LOG.info("Using '" + implicit.getName() + "' for "
-                + "classification (implied by '" + impliedBy.getName() + "')");
+        LOG.info("Using " + implicit.getName() + " because using "
+                + impliedBy.getName());
     }
 
     private static Set<Aspect> getAspectsFromProperties(Properties props) {
         Set<Aspect> aspects = new HashSet<Aspect>();
         aspects.addAll(Arrays.asList(Aspect.values()));
-        for (Aspect aspect : Aspect.values()) {
-            String name = "use." + aspect.getName();
-            String value = props.getProperty(name);
-            if (value != null) {
-                if (value.equalsIgnoreCase("false")) {
-                    LOG.info("Ignoring aspect (if possible): " 
-                            + aspect.getName());
-                    aspects.remove(aspect);
-                } else if (!value.equalsIgnoreCase("true")) {
-                    throw new IllegalArgumentException("Boolean property "
-                            + "must have value of true or false: " + name);
-                }
+        String ignorePropVal = props.getProperty("ignoreAspects");
+        if (ignorePropVal != null) {
+            LOG.info("Configuration specifies ignoreAspects: " + ignorePropVal);
+            Set<Aspect> toRemove = new HashSet<Aspect>();
+            for (String name : ignorePropVal.split(",")) {
+                Aspect aspect = Aspect.fromName(name);
+                logExplicitIgnore(aspect);
+                toRemove.add(Aspect.fromName(name));
             }
+            addImplicitIgnore(toRemove, Aspect.BMECH_PIDS,
+                    Aspect.BDEF_PIDS);
+            addImplicitIgnore(toRemove, Aspect.BINDING_KEY_ASSIGNMENTS,
+                    Aspect.BMECH_PIDS);
+            addImplicitIgnore(toRemove, Aspect.MIME_TYPES,
+                    Aspect.DATASTREAM_IDS);
+            addImplicitIgnore(toRemove, Aspect.FORMAT_URIS,
+                    Aspect.DATASTREAM_IDS);
+            aspects.removeAll(toRemove);
         }
         return aspects;
+    }
+    
+    private static void logExplicitIgnore(Aspect explicit) {
+        LOG.info("Ignoring " + explicit.getName());
+    }
+
+    private static void addImplicitIgnore(Set<Aspect> toRemove, Aspect implied,
+            Aspect cause) {
+        if (toRemove.contains(cause) && !toRemove.contains(implied)) {
+            logImplicitIgnore(implied, cause);
+            toRemove.add(implied);
+        }
+    }
+    
+    private static void logImplicitIgnore(Aspect implicit, Aspect impliedBy) {
+        LOG.info("Ignoring " + implicit.getName() + " because ignoring "
+                + impliedBy.getName());
     }
 
     @SuppressWarnings("unchecked")
@@ -400,7 +417,7 @@ public class DefaultClassifier implements Classifier {
                         out.append(" MIME=\"" + mimeType + "\"");
                     }
                     if (formatURI != null) {
-                        out.append(" FORMAT_URIS=\"" + mimeType + "\"");
+                        out.append(" FORMAT_URIS=\"" + formatURI + "\"");
                     }
                     out.append("/>\n");
                 }

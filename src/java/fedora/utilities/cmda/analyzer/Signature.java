@@ -183,7 +183,7 @@ public class Signature {
     @Override
     public String toString() {
         StringBuffer out = new StringBuffer();
-        out.append("[Legacy Content Model]\n  ");
+        out.append(Aspect.ORIG_CONTENT_MODEL.getName() + "\n  ");
         if (m_origContentModelID == null) {
             out.append("any");
         } else if (m_origContentModelID.length() == 0) {
@@ -191,11 +191,11 @@ public class Signature {
         } else {
             out.append("'" + m_origContentModelID + "'");
         }
-        out.append("\n[Behavior Definitions]\n  "
+        out.append("\n" + Aspect.BDEF_PIDS.getName() + "\n  "
                 + listStrings(m_bDefPIDs));
-        out.append("\n[Behavior Mechanisms]\n  " 
+        out.append("\n" + Aspect.BMECH_PIDS.getName() + "\n  " 
                 + listStrings(m_bMechPIDs));
-        out.append("\n[Binding Key Assignments]");
+        out.append("\n" + Aspect.BINDING_KEY_ASSIGNMENTS.getName());
         if (m_bindingKeyAssignments == null) {
             out.append("\n  any");
         } else {
@@ -207,15 +207,16 @@ public class Signature {
                 out.append("\n  none");
             }
         }
-        out.append("\n[Datastream IDs]\n  " + listStrings(m_datastreamIDs));
-        appendDSRestrictions("Datastream MIME Type", m_mimeTypes, out);
-        appendDSRestrictions("Datastream Format URI", m_formatURIs, out);
+        out.append("\n" + Aspect.DATASTREAM_IDS.getName() + "\n  "
+                + listStrings(m_datastreamIDs));
+        appendDSRestrictions(Aspect.MIME_TYPES, m_mimeTypes, out);
+        appendDSRestrictions(Aspect.FORMAT_URIS, m_formatURIs, out);
         return out.toString();
     }
     
-    private static void appendDSRestrictions(String label,
+    private static void appendDSRestrictions(Aspect aspect,
             Map<String, String> restrictions, StringBuffer out) {
-        out.append("\n[" + label + "]");
+        out.append("\n" + aspect.getName());
         if (restrictions == null) {
             out.append("\n  any");
         } else {
@@ -233,13 +234,12 @@ public class Signature {
     
     private static String listStrings(Set<String> set) {
         if (set == null) {
-            return "{any}";
+            return "any";
         }
         if (set.size() == 0) {
-            return "{none}";
+            return "none";
         }
         StringBuffer out = new StringBuffer();
-        out.append("{");
         boolean pastFirst = false;
         for (String string : set) {
             if (pastFirst) {
@@ -249,7 +249,6 @@ public class Signature {
             }
             out.append("'" + string + "'");
         }
-        out.append("}");
         return out.toString();
     }
 

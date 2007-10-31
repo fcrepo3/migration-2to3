@@ -9,6 +9,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -18,6 +19,7 @@ import fedora.server.errors.ObjectIntegrityException;
 import fedora.server.errors.StreamIOException;
 import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.translation.DOTranslationUtility;
+import fedora.server.storage.types.DatastreamXMLMetadata;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
@@ -198,9 +200,11 @@ public class Analyzer {
         try {
             while (objects.hasNext()) {
                 DigitalObject object = objects.next();
-                DigitalObject cModel = m_classifier.getContentModel(object);
-                recordMembership(object, cModel);
-                objectCount++;
+                if (object.isFedoraObjectType(DigitalObject.FEDORA_OBJECT)) {
+                    DigitalObject cModel = m_classifier.getContentModel(object);
+                    recordMembership(object, cModel);
+                    objectCount++;
+                }
             }
             serializeCModels();
         } finally {
@@ -221,8 +225,7 @@ public class Analyzer {
             int num = m_cModelNumber.get(object).intValue();
             String cModelFilename = CMODEL_PREFIX + num + CMODEL_SUFFIX;
             File file = new File(m_outputDir, cModelFilename);
-            LOG.info("Serializing content model " + num + "/" 
-                    + m_cModelCount + " to " + cModelFilename);
+            LOG.info("Serializing content model " + cModelFilename);
             FileOutputStream out = null;
             try {
                 out = new FileOutputStream(file);
@@ -260,11 +263,24 @@ public class Analyzer {
                                 new File(m_outputDir, MEMBER_PREFIX
                                         + m_cModelCount + MEMBER_SUFFIX))));
                 m_memberLists.put(cModel, writer);
+                printHeader(writer, cModel);
             } catch (IOException e) {
                 throw new RuntimeException(Messages.ERR_WRITE_FILE_FAILED, e);
             }
         }
         writer.println(object.getPid());
+    }
+   
+    @SuppressWarnings("unchecked")
+    private static void printHeader(PrintWriter writer, DigitalObject cModel) {
+        List list = cModel.datastreams("CLASS-DESCRIPTION");
+        DatastreamXMLMetadata ds = (DatastreamXMLMetadata) list.get(0);
+        try {
+            String xml = new String(ds.xmlContent, CHAR_ENCODING);
+            writer.println("# " + xml.replaceAll("\\n", "\r\n# "));
+        } catch (IOException e) {
+            LOG.warn("Unsupported encoding: " + CHAR_ENCODING);
+        }
     }
 
     private void closeMemberLists() {
@@ -344,16 +360,20 @@ public class Analyzer {
                         CLEAR_OUTPUT_DIR_PROPERTY, false));
             } catch (FileNotFoundException e) {
                 LOG.error(Messages.ERR_CONFIG_NOT_FOUND + args[0]);
-                System.exit(1);
+                exitFatally();
             } catch (IllegalArgumentException e) {
                 LOG.error(e.getMessage());
-                System.exit(1);
+                exitFatally();
                 // CHECKSTYLE:OFF
             } catch (Throwable th) {
                 // CHECKSTYLE:ON
                 LOG.error(Messages.ERR_ANALYSIS_FAILED, th);
-                System.exit(1);
+                exitFatally();
             }
         }
+    }
+    
+    private static void exitFatally() {
+        System.exit(1);
     }
 }
