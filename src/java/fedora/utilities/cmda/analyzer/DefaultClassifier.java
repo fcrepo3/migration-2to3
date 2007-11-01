@@ -22,6 +22,7 @@ import fedora.server.storage.types.DigitalObject;
 import fedora.server.storage.types.Disseminator;
 
 import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.digitalobject.PIDGenerator;
 
 import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
 
@@ -34,9 +35,12 @@ import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
 @SuppressWarnings("deprecation")
 public class DefaultClassifier implements Classifier {
 
-    /** The PID generator that will be used if none is specified. */
+    /**
+     * The PID generator that will be used if none is specified;
+     * <code>fedora.utilities.digitalobject.SimplePIDGenerator</code>
+     */
     public static final String DEFAULT_PID_GENERATOR
-            = "fedora.utilities.cmda.analyzer.DefaultPIDGenerator";
+            = "fedora.utilities.digitalobject.SimplePIDGenerator";
 
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(

@@ -1,4 +1,4 @@
-package fedora.utilities.cmda.analyzer;
+package fedora.utilities.digitalobject;
 
 import fedora.common.PID;
 
@@ -12,7 +12,7 @@ public interface PIDGenerator {
     /**
      * Gets a new PID.
      * 
-     * @return the new pid.
+     * @return the pid.
      */
     PID getNextPID();
 

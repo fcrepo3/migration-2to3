@@ -1,4 +1,4 @@
-package fedora.utilities.cmda.analyzer;
+package fedora.utilities.digitalobject;
 
 import java.util.Properties;
 
@@ -9,7 +9,8 @@ import fedora.common.PID;
  *
  * @author Chris Wilper
  */
-public class DefaultPIDGenerator implements PIDGenerator {
+public class DefaultPIDGenerator
+        implements PIDGenerator {
 
     /**
      * The PID prefix that will be used if none is specified;
@@ -24,7 +25,7 @@ public class DefaultPIDGenerator implements PIDGenerator {
     private int m_n;
 
     /**
-     * Constructs and instance.
+     * Creates an instance.
      * 
      * @param pidPrefix the PID prefix to use.
      */ 
@@ -33,22 +34,17 @@ public class DefaultPIDGenerator implements PIDGenerator {
     }
 
     /**
-     * Constructs an instance with configuration taken from the given
-     * properties.
+     * Creates an instance from properties.
      *
-     * <p><b>Specifying the PID prefix</b>
-     * <br/>
-     * The <code>pidPrefix</code> property will be used, if specified.
-     * Otherwise, the <code>DEFAULT_PID_PREFIX</code> will be used.</p>
+     * <pre>
+     *   pidPrefix (optional) - the PID prefix to use;
+     *                          default is DEFAULT_PID_PREFIX.
+     * </pre>
      * 
-     * @param props the properties from which to get the configuration.
+     * @param props the properties.
      */
     public DefaultPIDGenerator(Properties props) {
-        if (props.getProperty("pidPrefix") == null) {
-            m_pidPrefix = DEFAULT_PID_PREFIX;
-        } else {
-            m_pidPrefix = props.getProperty("pidPrefix");
-        }
+        m_pidPrefix = props.getProperty("pidPrefix", DEFAULT_PID_PREFIX);
     }
 
     //---

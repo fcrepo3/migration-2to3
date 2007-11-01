@@ -23,6 +23,7 @@ import fedora.server.storage.types.DatastreamXMLMetadata;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.digitalobject.ObjectLister;
 import fedora.utilities.file.FileUtil;
 
 import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
@@ -46,10 +47,10 @@ public class Analyzer {
     public static final String CLASSIFIER_PROPERTY = "classifier";
 
     /**
-     * The property indicating which object source to use;
-     * <code>objectSource</code>
+     * The property indicating which object lister to use;
+     * <code>objectLister</code>
      */
-    public static final String OBJECT_SOURCE_PROPERTY = "objectSource";
+    public static final String OBJECT_LISTER_PROPERTY = "objectLister";
     
     /**
      * The property indicating which output directory to use:
@@ -82,11 +83,11 @@ public class Analyzer {
             = "fedora.utilities.cmda.analyzer.DefaultClassifier";
 
     /**
-     * The object source that will be used if none is specified;
-     * <code>fedora.utilities.cmda.analyzer.DirObjectSource</code>
+     * The object lister that will be used if none is specified;
+     * <code>fedora.utilities.digitalobject.DirObjectLister</code>
      */
-    public static final String DEFAULT_OBJECT_SOURCE
-            = "fedora.utilities.cmda.analyzer.DirObjectSource";
+    public static final String DEFAULT_OBJECT_LISTER
+            = "fedora.utilities.digitalobject.DirObjectLister";
 
     /**
      * The serializer that will be used if none is specified;
@@ -141,10 +142,10 @@ public class Analyzer {
     //---
 
     /**
-     * Constructs an analyzer.
+     * Creates an instance.
      *
      * @param classifier the classifier to use.
-     * @param serializer the serializer to use for the output content models.
+     * @param serializer the serializer to use for output objects.
      */
     public Analyzer(Classifier classifier, DOSerializer serializer) {
         m_classifier = classifier;
@@ -152,22 +153,16 @@ public class Analyzer {
     }
 
     /**
-     * Constructs an analyzer with configuration taken from the given
-     * properties.
+     * Creates an instance from properties.
      *
-     * <p><b>Specifying the Classifier</b><br/>
-     * If <code>classifier</code> is specified, an instance of the class it
-     * names will be constructed by passing in the given properties to its
-     * Properties (or no-arg) constructor.  Otherwise, the default classifier
-     * will be used.
+     * <pre>
+     *   classifier (optional) - the classifier to use;
+     *                           default is DEFAULT_CLASSIFIER.
+     *   serializer (optional) - the serializer to use for output objects;
+     *                           default is DEFAULT_SERIALIZER.
+     * </pre>
      *
-     * <p><b>Specifying the Serializer</b><br/>
-     * If <code>serializer</code> is specified, an instance of the class it
-     * names will be constructed by passing in the given properties to its
-     * Properties (or no-arg) constructor.  Otherwise, the default serializer
-     * will be used.
-     *
-     * @param props the properties to get configuration from.
+     * @param props the properties.
      */
     public Analyzer(Properties props) {
         m_classifier = (Classifier) ConfigUtil.construct(props,
@@ -184,22 +179,21 @@ public class Analyzer {
      * Iterates the given objects, classifying them and sending output
      * to the given directory.
      *
-     * @param objects iterator of objects to classify.
+     * @param lister provides the list of objects to classify.
      * @param outputDir the directory to send output to.  It must not contain
      *        any files.  If it doesn't yet exist, it will be created.
      * @param clearOutputDir if the output directory contains files, and this
      *        is true, they will be automatically deleted before classification
      *        begins.
      */
-    public void classifyAll(ObjectSource objects, File outputDir,
+    public void classifyAll(ObjectLister lister, File outputDir,
             boolean clearOutputDir) {
         clearState();
         setOutputDir(outputDir, clearOutputDir);
         LOG.info("Classification started.");
         int objectCount = 0;
         try {
-            while (objects.hasNext()) {
-                DigitalObject object = objects.next();
+            for (DigitalObject object : lister) {
                 if (object.isFedoraObjectType(DigitalObject.FEDORA_OBJECT)) {
                     DigitalObject cModel = m_classifier.getContentModel(object);
                     recordMembership(object, cModel);
@@ -351,11 +345,11 @@ public class Analyzer {
                     props.load(new FileInputStream(args[0]));
                 }
                 Analyzer analyzer = new Analyzer(props);
-                ObjectSource source = (ObjectSource) ConfigUtil.construct(props,
-                        OBJECT_SOURCE_PROPERTY, DEFAULT_OBJECT_SOURCE);
+                ObjectLister lister = (ObjectLister) ConfigUtil.construct(props,
+                        OBJECT_LISTER_PROPERTY, DEFAULT_OBJECT_LISTER);
                 String outputDir = ConfigUtil.getRequiredString(props,
                         OUTPUT_DIR_PROPERTY);
-                analyzer.classifyAll(source, new File(outputDir),
+                analyzer.classifyAll(lister, new File(outputDir),
                         ConfigUtil.getOptionalBoolean(props,
                         CLEAR_OUTPUT_DIR_PROPERTY, false));
             } catch (FileNotFoundException e) {

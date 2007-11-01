@@ -12,7 +12,7 @@ import fedora.server.storage.types.DigitalObject;
  *
  * @author Chris Wilper
  */
-interface ObjectStore
+public interface ObjectStore
         extends ObjectLister {
    
     /**

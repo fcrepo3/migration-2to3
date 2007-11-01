@@ -11,7 +11,7 @@ import fedora.server.storage.types.DigitalObject;
  *
  * @author Chris Wilper
  */
-interface ObjectLister
+public interface ObjectLister
         extends Iterable<DigitalObject> {
     
     // no additional methods
