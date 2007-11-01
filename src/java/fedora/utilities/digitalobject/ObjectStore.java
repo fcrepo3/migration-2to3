@@ -7,8 +7,7 @@ package fedora.utilities.digitalobject;
 import fedora.server.storage.types.DigitalObject;
 
 /**
- * Interface to a system that provides basic read/write access to a set of
- * pre-existing digital objects.
+ * Provides basic read/write access to a set of pre-existing digital objects.
  *
  * @author Chris Wilper
  */

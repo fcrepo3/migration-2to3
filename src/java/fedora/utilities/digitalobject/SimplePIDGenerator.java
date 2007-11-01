@@ -9,7 +9,7 @@ import fedora.common.PID;
  *
  * @author Chris Wilper
  */
-public class DefaultPIDGenerator
+public class SimplePIDGenerator
         implements PIDGenerator {
 
     /**
@@ -29,7 +29,7 @@ public class DefaultPIDGenerator
      * 
      * @param pidPrefix the PID prefix to use.
      */ 
-    public DefaultPIDGenerator(String pidPrefix) {
+    public SimplePIDGenerator(String pidPrefix) {
         m_pidPrefix = pidPrefix;
     }
 
@@ -43,7 +43,7 @@ public class DefaultPIDGenerator
      * 
      * @param props the properties.
      */
-    public DefaultPIDGenerator(Properties props) {
+    public SimplePIDGenerator(Properties props) {
         m_pidPrefix = props.getProperty("pidPrefix", DEFAULT_PID_PREFIX);
     }
 

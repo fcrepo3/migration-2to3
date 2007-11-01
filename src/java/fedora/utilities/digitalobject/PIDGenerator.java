@@ -3,7 +3,7 @@ package fedora.utilities.digitalobject;
 import fedora.common.PID;
 
 /**
- * Interface for getting new PIDs for generated objects.
+ * Gets new PIDs.
  *
  * @author Chris Wilper
  */

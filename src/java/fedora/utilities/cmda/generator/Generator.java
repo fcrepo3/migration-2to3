@@ -1,7 +1,7 @@
 package fedora.utilities.cmda.generator;
 
 /**
- * Utility to generate transformations rules for instance objects to
+ * Utility to generate transformation rules for instance objects to
  * make them conform to content models to which they should belong.
  *
  * @author Chris Wilper
