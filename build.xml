@@ -37,7 +37,9 @@
   <target name="analyzer-classes">
     <mkdir dir="build/analyzer-classes"/>
     <javac srcdir="src/java" destdir="build/analyzer-classes" 
-           includes="fedora/utilities/cmda/analyzer/**" 
+           includes="fedora/utilities/cmda/analyzer/**
+                     fedora/utilities/file/**
+                     fedora/utilities/digitalobject/**" 
            classpathref="analyzer.compile.classpath"
            optimize="${optimize}" 
            debug="${debug}"

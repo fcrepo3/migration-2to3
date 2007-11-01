@@ -4,6 +4,8 @@
  */
 package fedora.utilities.config;
 
+import java.io.File;
+
 import java.util.Properties;
 
 import java.lang.reflect.InvocationTargetException;
@@ -57,6 +59,23 @@ public abstract class ConfigUtil {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Not an integer: " + value);
         }
+    }
+    
+    /**
+     * Gets an optional file from properties.
+     * 
+     * @param props properties in which to find the value.
+     * @param name property name.
+     * @param defaultValue the value to return if the property isn't found.
+     * @return the value.
+     */
+    public static File getOptionalFile(Properties props, String name,
+            File defaultValue) {
+        String value = props.getProperty(name);
+        if (value == null) {
+            return defaultValue;
+        }
+        return new File(value);
     }
   
     /**

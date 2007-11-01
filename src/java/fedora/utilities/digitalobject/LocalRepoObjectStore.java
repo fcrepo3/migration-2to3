@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -24,7 +25,11 @@ import fedora.server.config.ModuleConfiguration;
 import fedora.server.config.Parameter;
 import fedora.server.config.ServerConfiguration;
 import fedora.server.config.ServerConfigurationParser;
+import fedora.server.storage.translation.DODeserializer;
 import fedora.server.storage.types.DigitalObject;
+
+import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.file.DriverShim;
 
 /**
  * @author Chris Wilper
@@ -32,9 +37,19 @@ import fedora.server.storage.types.DigitalObject;
 public class LocalRepoObjectStore
         implements ObjectStore {
     
+    /** 
+     * The deserializer that will be used if none is specified;
+     * <code>fedora.server.storage.translation.FOXML1_0DODeserializer</code>
+     */
+    public static final String DEFAULT_DESERIALIZER =
+            "fedora.server.storage.translation.FOXML1_0DODeserializer";
+    
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(
             LocalRepoObjectStore.class);
+   
+    /** The deserializer to use. */
+    private final DODeserializer m_deserializer;
    
     /** The base directory where Fedora objects are stored. */
     private final File m_objectStoreBase;
@@ -46,13 +61,38 @@ public class LocalRepoObjectStore
      * Creates an instance.
      * 
      * @param fedoraHome the FEDORA_HOME directory.
+     * @param jdbcJar a jar containing the appropriate jdbc driver, or null
+     *                if it's already in the classpath.
+     * @param deserializer the deserializer to use.
      */
-    public LocalRepoObjectStore(File fedoraHome) {
+    public LocalRepoObjectStore(File fedoraHome, File jdbcJar,
+            DODeserializer deserializer) {
+        m_deserializer = deserializer;
         ServerConfiguration serverConfig = getServerConfig(fedoraHome);
         m_objectStoreBase = getObjectStoreBase(serverConfig, fedoraHome);
-        m_dbInfo = getDBInfo(serverConfig);
+        m_dbInfo = getDBInfo(serverConfig, jdbcJar);
     }
-       
+    
+    /**
+     * Creates an instance from properties.
+     * 
+     * <pre>
+     *   fedoraHome   (required) - the Fedora home directory.
+     *   jdbcJar      (optional) - a jar containing the appropriate jdbc
+     *                             driver, if it's not already in the classpath.
+     *   deserializer (required) - the deserializer to use;
+     *                             default is DEFAULT_DESERIALIZER.
+     * </pre>
+     * 
+     * @param props the properties.
+     */
+    public LocalRepoObjectStore(Properties props) {
+        this(new File(ConfigUtil.getRequiredString(props, "fedoraHome")),
+                ConfigUtil.getOptionalFile(props, "jdbcJar", null),
+                (DODeserializer) ConfigUtil.construct(props, "deserializer", 
+                DEFAULT_DESERIALIZER));
+    }
+    
     //---
     // ObjectStore implementation
     //---
@@ -81,8 +121,8 @@ public class LocalRepoObjectStore
      * {@inheritDoc}
      */
     public Iterator<DigitalObject> iterator() {
-        // TODO Auto-generated method stub
-        return null;
+        return new LocalRepoObjectIterator(m_objectStoreBase, getConnection(),
+                m_deserializer.getInstance());
     }
     
     //---
@@ -107,7 +147,7 @@ public class LocalRepoObjectStore
     //---
     
     private static Map<String, String> getDBInfo(
-            ServerConfiguration serverConfig) {
+            ServerConfiguration serverConfig, File jdbcJar) {
         
         // get ConnectionPoolManager's defaultPoolName
         ModuleConfiguration cpmConfig = getRequiredModuleConfig(serverConfig,
@@ -123,7 +163,7 @@ public class LocalRepoObjectStore
                     + defaultPoolName);
         }
 
-        initJDBC(getRequiredParam(storeConfig, "jdbcDriverClass"));
+        initJDBC(getRequiredParam(storeConfig, "jdbcDriverClass"), jdbcJar);
 
         Map<String, String> map = new HashMap<String, String>();
         map.put("jdbcURL", getRequiredParam(storeConfig, "jdbcURL"));
@@ -140,13 +180,22 @@ public class LocalRepoObjectStore
         return getRequiredFileParam(llConfig, "object_store_base", fedoraHome);
     }
     
-    private static void initJDBC(String jdbcDriverClass) {
-        try {
-            Class.forName(jdbcDriverClass);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Unable to initialize database --"
-                    + " the JDBC driver " + jdbcDriverClass 
-                    + " is not in the CLASSPATH");
+    private static void initJDBC(String jdbcDriverClass, File jdbcJar) {
+        if (jdbcJar == null) {
+            try {
+                Class.forName(jdbcDriverClass);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("Cannot find jdbc driver "
+                        + jdbcDriverClass + " in classpath (try specifying "
+                        + "jdbcJar=/your/jdbc/driver.jar)"); 
+            }
+        } else {
+            try {
+                DriverShim.loadAndRegister(jdbcJar, jdbcDriverClass);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("Cannot find jdbc driver "
+                        + jdbcDriverClass + " in file: " + jdbcJar.getPath());
+            }
         }
     }
         
@@ -159,7 +208,7 @@ public class LocalRepoObjectStore
             throw new RuntimeException("Cannot find configuration for module "
                     + role + " in fcfg");
         }
-        if (moduleConfig.getClassName().equals(expectedImpl)) {
+        if (!moduleConfig.getClassName().equals(expectedImpl)) {
             LOG.warn("Expected " + expectedImpl + " as implementing class "
                     + "for module " + role + " in fcfg");
         }
@@ -187,7 +236,7 @@ public class LocalRepoObjectStore
     }
 
     private static ServerConfiguration getServerConfig(File fedoraHome) {
-        File fcfg = new File(fedoraHome, "server/fedora.fcfg");
+        File fcfg = new File(fedoraHome, "server/config/fedora.fcfg");
         if (!fcfg.exists()) {
             throw new IllegalArgumentException("No such file: "
                     + fcfg.getPath());
