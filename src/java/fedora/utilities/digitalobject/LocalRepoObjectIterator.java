@@ -27,6 +27,9 @@ import fedora.server.storage.types.DigitalObject;
  */
 class LocalRepoObjectIterator
         implements Iterator<DigitalObject> {
+   
+    /** The query to get all token, path pairs. */
+    private static final String QUERY = "SELECT token, path FROM objectPaths";
     
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(
@@ -102,7 +105,7 @@ class LocalRepoObjectIterator
      */
     @Override
     public void finalize() {
-        close();
+        RepoUtil.close(m_conn);
     }
 
     //---
@@ -112,9 +115,10 @@ class LocalRepoObjectIterator
     private ResultSet executeQuery() {
         try {
             Statement st = m_conn.createStatement();
-            return st.executeQuery("SELECT token, path FROM objectPaths");
+            LOG.debug("Executing query: " + QUERY);
+            return st.executeQuery(QUERY);
         } catch (SQLException e) {
-            close();
+            RepoUtil.close(m_conn);
             throw new RuntimeException("Error querying database", e);
         }
     }
@@ -136,18 +140,18 @@ class LocalRepoObjectIterator
                     err = e;
                 } finally {
                     if (err != null) {
-                        close();
+                        RepoUtil.close(m_conn);
                         throw new RuntimeException("Error deserializing "
                                 + file.getPath(), err);
                     }
                 }
             }
         } catch (SQLException e) {
-            close();
+            RepoUtil.close(m_conn);
             throw new RuntimeException("Error getting next path from "
                     + "database", e);
         }
-        close();
+        RepoUtil.close(m_conn);
         return null;
     }
     
@@ -157,16 +161,6 @@ class LocalRepoObjectIterator
             return file;
         }
         return new File(m_objectStoreBase, path);
-    }
-    
-    private void close() {
-        try {
-            if (!m_conn.isClosed()) {
-                m_conn.close();
-            }
-        } catch (SQLException e) {
-            LOG.warn("Error closing connection", e);
-        }
     }
 
 }
