@@ -92,9 +92,9 @@ public class DriverShim
         }
     }
 
-    //
+    //---
     // Driver implementation
-    //
+    //---
 
     /**
      * {@inheritDoc}

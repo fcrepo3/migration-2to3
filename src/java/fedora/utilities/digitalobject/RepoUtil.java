@@ -14,6 +14,7 @@ import java.util.Map;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -223,11 +224,18 @@ abstract class RepoUtil {
                 + objectStoreBase.getPath());
         DirObjectIterator iter = new DirObjectIterator(objectStoreBase, null,
                 deserializer);
-        while (iter.hasNext()) {
-            int count = 0;
-            while (iter.hasNext() && count < 5000) {
-                
+        try {
+            PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO objecPaths (token, path) "
+                    + "VALUES (%, %)");
+            while (iter.hasNext()) {
+                int count = 0;
+                while (iter.hasNext() && count < 5000) {
+                }
             }
+            ps.close();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database error", e);
         }
         // TODO: implement
     }
