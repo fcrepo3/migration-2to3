@@ -43,6 +43,9 @@ class DirObjectIterator
     /** The next object (null when exhausted). */
     private DigitalObject m_next;
 
+    /** The most recently encountered file (null till next() is called). */
+    private File m_currentFile;
+
     /**
      * Constructs an instance.
      * 
@@ -55,6 +58,15 @@ class DirObjectIterator
         m_files = new RecursiveFileIterator(sourceDir, filter);
         m_deserializer = deserializer;
         m_next = getNext();
+    }
+    
+    /**
+     * Gets the most recently encountered file.
+     * 
+     * @return the file, or null if next() hasn't been called yet.
+     */
+    public File currentFile() {
+        return m_currentFile;
     }
 
     //---
@@ -93,12 +105,12 @@ class DirObjectIterator
 
     private DigitalObject getNext() {
         while (m_files.hasNext()) {
-            File file = m_files.next();
+            m_currentFile = m_files.next();
             Exception err = null;
             try {
                 DigitalObject obj = new BasicDigitalObject();
                 m_deserializer.deserialize(
-                        new FileInputStream(file), obj, "UTF-8",
+                        new FileInputStream(m_currentFile), obj, "UTF-8",
                         DOTranslationUtility.DESERIALIZE_INSTANCE);
                 return obj;
             } catch (IOException e) {
@@ -107,11 +119,12 @@ class DirObjectIterator
                 err = e;
             } finally {
                 if (err != null) {
-                    if (isXML(file)) {
-                        LOG.warn("Skipping " + file.getPath() + "; can't "
-                                + "deserialize", err);
+                    if (isXML(m_currentFile)) {
+                        LOG.warn("Skipping " + m_currentFile.getPath()
+                                + "; can't " + "deserialize", err);
                     } else {
-                        LOG.debug("Skipping " + file.getPath() + "; not XML");
+                        LOG.debug("Skipping " + m_currentFile.getPath()
+                                + "; not XML");
                     }
                 }
             }

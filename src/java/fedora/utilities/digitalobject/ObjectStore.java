@@ -29,5 +29,10 @@ public interface ObjectStore
      * @return whether the object existed and was therefore replaced.
      */
     boolean replaceObject(DigitalObject obj);
+    
+    /**
+     * Releases any resources allocated by this object.
+     */
+    void close();
 
 }

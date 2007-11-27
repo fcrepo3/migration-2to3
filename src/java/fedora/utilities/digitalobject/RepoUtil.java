@@ -28,6 +28,7 @@ import fedora.server.config.Parameter;
 import fedora.server.config.ServerConfiguration;
 import fedora.server.config.ServerConfigurationParser;
 import fedora.server.storage.translation.DODeserializer;
+import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.DriverShim;
 
@@ -226,18 +227,19 @@ abstract class RepoUtil {
                 deserializer);
         try {
             PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO objecPaths (token, path) "
+                    "INSERT INTO objectPaths (token, path) "
                     + "VALUES (%, %)");
             while (iter.hasNext()) {
-                int count = 0;
-                while (iter.hasNext() && count < 5000) {
-                }
+                // TODO: do this in transactions of 1k inserts each
+                DigitalObject obj = iter.next();
+                ps.setString(1, obj.getPid());
+                ps.setString(2, iter.currentFile().getPath());
+                ps.executeUpdate();
             }
             ps.close();
         } catch (SQLException e) {
             throw new RuntimeException("Database error", e);
         }
-        // TODO: implement
     }
 
     private static int countObjectPaths(Connection conn) {

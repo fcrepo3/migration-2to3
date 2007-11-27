@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.Properties;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import fedora.server.config.ServerConfiguration;
 import fedora.server.storage.translation.DODeserializer;
@@ -19,6 +22,8 @@ import fedora.server.storage.types.DigitalObject;
 import fedora.utilities.config.ConfigUtil;
 
 /**
+ * Non-threadsafe interface to a local repository.
+ * 
  * @author Chris Wilper
  */
 public class LocalRepoObjectStore
@@ -39,6 +44,9 @@ public class LocalRepoObjectStore
    
     /** The URL, username, and password info for the Fedora database. */
     private final Map<String, String> m_dbInfo;
+    
+    /** The connection this instance uses. */
+    private final Connection m_conn;
    
     /**
      * Creates an instance.
@@ -55,12 +63,16 @@ public class LocalRepoObjectStore
         m_objectStoreBase = RepoUtil.getObjectStoreBase(
                 serverConfig, fedoraHome);
         m_dbInfo = RepoUtil.getDBInfo(serverConfig, jdbcJar);
-        Connection conn = RepoUtil.getConnection(m_dbInfo);
+        m_conn = RepoUtil.getConnection(m_dbInfo);
+        boolean initialized = false;
         try {
-            RepoUtil.buildObjectPathsIfNeeded(conn, m_objectStoreBase,
+            RepoUtil.buildObjectPathsIfNeeded(m_conn, m_objectStoreBase,
                     m_deserializer);
+            initialized = true;
         } finally {
-            RepoUtil.close(conn);
+            if (!initialized) {
+                RepoUtil.close(m_conn);
+            }
         }
     }
     
@@ -92,7 +104,11 @@ public class LocalRepoObjectStore
      * {@inheritDoc}
      */
     public DigitalObject getObject(String pid) {
-        // TODO: implement this
+        String path = getPath(pid);
+        if (path == null) {
+            return null;
+        }
+        // TODO: deserialize object at path and return it
         return null;
     }
 
@@ -100,8 +116,19 @@ public class LocalRepoObjectStore
      * {@inheritDoc}
      */
     public boolean replaceObject(DigitalObject obj) {
-        // TODO: implement this
+        String path = getPath(obj.getPid());
+        if (path == null) {
+            return false;
+        }
+        // TODO: serialize object to path and return true
         return false;
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public void close() {
+        RepoUtil.close(m_conn);
     }
     
     //---
@@ -115,6 +142,40 @@ public class LocalRepoObjectStore
         return new LocalRepoObjectIterator(m_objectStoreBase, 
                 RepoUtil.getConnection(m_dbInfo),
                 m_deserializer.getInstance());
+    }
+    
+    //---
+    // Object overrides
+    //---
+   
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void finalize() {
+        close();
+    }
+    
+    //---
+    // Instance helpers
+    //---
+   
+    private String getPath(String pid) {
+        PreparedStatement st = null;
+        try {
+            st = m_conn.prepareStatement(
+                    "SELECT path FROM objectPaths WHERE token = %");
+            st.setString(1, pid);
+            ResultSet result = st.executeQuery();
+            if (!result.next()) {
+                return null;
+            }
+            return result.getString(1);
+        } catch (SQLException e) {
+            throw new Error("Error querying database for object path", e);
+        } finally {
+            RepoUtil.close(st);
+        }
     }
     
 }
