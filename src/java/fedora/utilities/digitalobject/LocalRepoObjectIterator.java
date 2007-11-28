@@ -1,8 +1,6 @@
 package fedora.utilities.digitalobject;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -14,11 +12,12 @@ import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 
-import fedora.server.errors.ServerException;
+import fedora.common.FaultException;
+
 import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.translation.DOTranslationUtility;
-import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.DigitalObject;
+
+import fedora.utilities.file.FileUtil;
 
 /**
  * An object iterator that works against a local Fedora repository.
@@ -119,48 +118,32 @@ class LocalRepoObjectIterator
             return st.executeQuery(QUERY);
         } catch (SQLException e) {
             RepoUtil.close(m_conn);
-            throw new RuntimeException("Error querying database", e);
+            throw new FaultException("Error querying database", e);
         }
     }
 
     private DigitalObject getNext() {
         try {
             while (m_results.next()) {
-                File file = getFile(m_results.getString("path"));
-                Exception err = null;
+                File file = FileUtil.getFile(m_objectStoreBase,
+                        m_results.getString("path"));
+                DigitalObject obj = null;
                 try {
-                    DigitalObject obj = new BasicDigitalObject();
-                    m_deserializer.deserialize(
-                            new FileInputStream(file), obj, "UTF-8",
-                            DOTranslationUtility.DESERIALIZE_INSTANCE);
+                    obj = RepoUtil.readObject(m_deserializer, file);
                     return obj;
-                } catch (IOException e) {
-                    err = e;
-                } catch (ServerException e) {
-                    err = e;
                 } finally {
-                    if (err != null) {
+                    if (obj == null) {
                         RepoUtil.close(m_conn);
-                        throw new RuntimeException("Error deserializing "
-                                + file.getPath(), err);
                     }
                 }
             }
         } catch (SQLException e) {
             RepoUtil.close(m_conn);
-            throw new RuntimeException("Error getting next path from "
+            throw new FaultException("Error getting next path from "
                     + "database", e);
         }
         RepoUtil.close(m_conn);
         return null;
     }
     
-    private File getFile(String path) {
-        File file = new File(path);
-        if (file.isAbsolute()) {
-            return file;
-        }
-        return new File(m_objectStoreBase, path);
-    }
-
 }

@@ -81,6 +81,7 @@
         </module>
         <module name="MissingSwitchDefault"/>
         <module name="RedundantThrows">
+            <property name="allowUnchecked" value="true"/>
             <property name="logLoadErrors" value="true"/>
             <property name="suppressLoadErrors" value="true"/>
         </module>
@@ -112,8 +113,12 @@
         <module name="JavaNCSS"/>
         <module name="BooleanExpressionComplexity"/>
         <module name="NPathComplexity"/>
-        <module name="ClassDataAbstractionCoupling"/>
-        <module name="ClassFanOutComplexity"/>
+        <module name="ClassDataAbstractionCoupling">
+            <property name="max" value="10"/>
+        </module>
+        <module name="ClassFanOutComplexity">
+            <property name="max" value="30"/>
+        </module>
         <module name="CyclomaticComplexity">
             <property name="max" value="8"/>
         </module>

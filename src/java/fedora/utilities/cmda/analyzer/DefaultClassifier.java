@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import fedora.common.Constants;
+import fedora.common.FaultException;
 
 import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.DSBinding;
@@ -384,7 +385,7 @@ public class DefaultClassifier implements Classifier {
             ds.xmlContent = xml.getBytes(CHAR_ENCODING);
             obj.datastreams(dsID).add(ds);
         } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
+            throw new FaultException(e);
         }
     }
 

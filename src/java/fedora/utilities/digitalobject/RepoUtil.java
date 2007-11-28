@@ -7,6 +7,7 @@ package fedora.utilities.digitalobject;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.util.HashMap;
@@ -21,26 +22,104 @@ import java.sql.Statement;
 
 import org.apache.log4j.Logger;
 
+import fedora.common.FaultException;
+
 import fedora.server.config.Configuration;
 import fedora.server.config.DatastoreConfiguration;
 import fedora.server.config.ModuleConfiguration;
 import fedora.server.config.Parameter;
 import fedora.server.config.ServerConfiguration;
 import fedora.server.config.ServerConfigurationParser;
+import fedora.server.errors.ServerException;
 import fedora.server.storage.translation.DODeserializer;
+import fedora.server.storage.translation.DOSerializer;
+import fedora.server.storage.translation.DOTranslationUtility;
+import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.DriverShim;
+import fedora.utilities.file.FileUtil;
 
 /**
  * Utility methods for working with a local Fedora repository.
  * 
  * @author Chris Wilper
  */
-abstract class RepoUtil {
+public abstract class RepoUtil {
 
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(RepoUtil.class);
+   
+    /** Number of inserts to do per transaction, at most. */
+    private static final int INSERT_BATCH_SIZE = 1000;
+    
+    /**
+     * Deserializes a digital object from a file.
+     * 
+     * @param deserializer the deserializer to use.
+     * @param file the serialized object.
+     * @return the object.
+     * @throws FaultException if the file can't be read or deserialized.
+     */
+    public static DigitalObject readObject(DODeserializer deserializer,
+            File file)
+            throws FaultException {
+        DigitalObject obj = null;
+        Exception error = null;
+        try {
+            obj = new BasicDigitalObject();
+            deserializer.deserialize(
+                    new FileInputStream(file), obj, "UTF-8",
+                    DOTranslationUtility.DESERIALIZE_INSTANCE);
+        } catch (IOException e) {
+            error = e;
+        } catch (ServerException e) {
+            error = e;
+        } finally {
+            if (error != null) {
+                throw new FaultException("Error deserializing from "
+                        + file.getPath(), error);
+            }
+        }
+        return obj;
+    }
+    
+    /**
+     * Serializes a digital object to a file.
+     * 
+     * @param serializer the serializer to use.
+     * @param obj the object to serialize.
+     * @param file the file to write to.
+     * @throws FaultException if the file can't be written or deserialized.
+     */
+    public static void writeObject(DOSerializer serializer, DigitalObject obj,
+            File file)
+            throws FaultException {
+        FileOutputStream out = null;
+        Exception error = null;
+        try {
+            out = new FileOutputStream(file);
+            serializer.getInstance().serialize(
+                    obj, out, "UTF-8", 
+                    DOTranslationUtility.SERIALIZE_EXPORT_MIGRATE);
+        } catch (ServerException e) {
+            error = e;
+        } catch (IOException e) {
+            error = e;
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    LOG.error("Error closing file " + file.getPath());
+                }
+            }
+            if (error != null) {
+                throw new FaultException("Error serializing to "
+                        + file.getPath());
+            }
+        }
+    }
 
     /**
      * Gets a new database connection.
@@ -54,7 +133,7 @@ abstract class RepoUtil {
             return DriverManager.getConnection(url, dbInfo.get("dbUsername"),
                     dbInfo.get("dbPassword"));
         } catch (SQLException e) {
-            throw new RuntimeException("Unable to connect to the database at "
+            throw new FaultException("Unable to connect to the database at "
                     + url + " -- make sure it's running and the username "
                     + "and password are correct.");
         }
@@ -103,7 +182,7 @@ abstract class RepoUtil {
         DatastoreConfiguration storeConfig =
                 serverConfig.getDatastoreConfiguration(defaultPoolName);
         if (storeConfig == null) {
-            throw new RuntimeException("Cannot find datastore configuration: "
+            throw new FaultException("Cannot find datastore configuration: "
                     + defaultPoolName);
         }
 
@@ -150,7 +229,7 @@ abstract class RepoUtil {
             return new ServerConfigurationParser(new FileInputStream(fcfg))
                     .parse();
         } catch (IOException e) {
-            throw new RuntimeException("Error parsing " + fcfg.getPath());
+            throw new FaultException("Error parsing " + fcfg.getPath());
         }
     }
 
@@ -183,6 +262,20 @@ abstract class RepoUtil {
             LOG.warn("Error closing statement", e);
         }
     }
+    /**
+     * Closes the result set if it's not null.
+     * 
+     * @param results the result set.
+     */
+    public static void close(ResultSet results) {
+        try {
+            if (results != null) {
+                results.close();
+            }
+        } catch (SQLException e) {
+            LOG.warn("Error closing result set", e);
+        }
+    }
 
     private static ModuleConfiguration getRequiredModuleConfig(
             ServerConfiguration serverConfig, String role, 
@@ -190,7 +283,7 @@ abstract class RepoUtil {
         ModuleConfiguration moduleConfig =
                 serverConfig.getModuleConfiguration(role);
         if (moduleConfig == null) {
-            throw new RuntimeException("Cannot find configuration for module "
+            throw new FaultException("Cannot find configuration for module "
                     + role + " in fcfg");
         }
         if (!moduleConfig.getClassName().equals(expectedImpl)) {
@@ -203,17 +296,13 @@ abstract class RepoUtil {
     private static File getRequiredFileParam(Configuration config, String name,
             File fedoraHome) {
         String path = getRequiredParam(config, name);
-        File file = new File(path);
-        if (file.isAbsolute()) {
-            return file;
-        }
-        return new File(fedoraHome, path);
+        return FileUtil.getFile(fedoraHome, path);
     }
 
     private static String getRequiredParam(Configuration config, String name) {
         Parameter param = config.getParameter(name);
         if (param == null) {
-            throw new RuntimeException("Required fcfg parameter missing: "
+            throw new FaultException("Required fcfg parameter missing: "
                     + name);
         }
         return param.getValue();
@@ -228,17 +317,28 @@ abstract class RepoUtil {
         try {
             PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO objectPaths (token, path) "
-                    + "VALUES (%, %)");
+                    + "VALUES (?, ?)");
             while (iter.hasNext()) {
-                // TODO: do this in transactions of 1k inserts each
-                DigitalObject obj = iter.next();
-                ps.setString(1, obj.getPid());
-                ps.setString(2, iter.currentFile().getPath());
-                ps.executeUpdate();
+                conn.setAutoCommit(false);
+                int count = 0;
+                while (count < INSERT_BATCH_SIZE && iter.hasNext()) {
+                    DigitalObject obj = iter.next();
+                    ps.setString(1, obj.getPid());
+                    ps.setString(2, iter.currentFile().getPath());
+                    ps.executeUpdate();
+                    count++;
+                }
+                conn.commit();
             }
             ps.close();
         } catch (SQLException e) {
-            throw new RuntimeException("Database error", e);
+            throw new FaultException("Database error", e);
+        } finally {
+            try {
+                conn.setAutoCommit(true);
+            } catch (SQLException e) {
+                LOG.warn("Error setting auto-commit to true", e);
+            }
         }
     }
 
@@ -251,7 +351,7 @@ abstract class RepoUtil {
             results.next();
             return results.getInt(1);
         } catch (SQLException e) {
-            throw new RuntimeException("Error counting objectPaths", e);
+            throw new FaultException("Error counting objectPaths", e);
         } finally {
             close(st);
         }
@@ -262,7 +362,7 @@ abstract class RepoUtil {
             try {
                 Class.forName(jdbcDriverClass);
             } catch (ClassNotFoundException e) {
-                throw new RuntimeException("Cannot find jdbc driver "
+                throw new FaultException("Cannot find jdbc driver "
                         + jdbcDriverClass + " in classpath (try specifying "
                         + "jdbcJar=/your/jdbc/driver.jar)");
             }
@@ -270,7 +370,7 @@ abstract class RepoUtil {
             try {
                 DriverShim.loadAndRegister(jdbcJar, jdbcDriverClass);
             } catch (ClassNotFoundException e) {
-                throw new RuntimeException("Cannot find jdbc driver "
+                throw new FaultException("Cannot find jdbc driver "
                         + jdbcDriverClass + " in file: " + jdbcJar.getPath());
             }
         }

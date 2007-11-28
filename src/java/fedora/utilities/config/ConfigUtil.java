@@ -12,6 +12,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.apache.log4j.Logger;
 
+import fedora.common.FaultException;
+
 /**
  * Defines several utility methods for performing configuration-related tasks.
  * 
@@ -145,9 +147,9 @@ public abstract class ConfigUtil {
             if (cause instanceof RuntimeException) {
                 throw (RuntimeException) cause;
             }
-            throw new RuntimeException(message, th.getCause());
+            throw new FaultException(message, th.getCause());
         }
-        throw new RuntimeException(message, th);
+        throw new FaultException(message, th);
     }
  
 

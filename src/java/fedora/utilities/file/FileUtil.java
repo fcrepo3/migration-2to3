@@ -12,7 +12,7 @@ import java.io.File;
  * @author Chris Wilper
  */
 public abstract class FileUtil {
-  
+   
     /**
      * Removes all files (and optionally, directories) within the given
      * directory.
@@ -24,6 +24,22 @@ public abstract class FileUtil {
     public static boolean clearDirectory(File dir, boolean recursive) {
         File[] files = dir.listFiles();
         return clearDirectories(files, recursive) && clearFiles(files);
+    }
+   
+    /**
+     * Gets an absolute file based on a given path, relative to a parent
+     * directory or by itself, if absolute.
+     * 
+     * @param parentDir the parent directory.
+     * @param path the path, relative to the parent or absolute.
+     * @return the file.
+     */
+    public static File getFile(File parentDir, String path) {
+        File file = new File(path);
+        if (file.isAbsolute() || path.startsWith("\\")) {
+            return file.getAbsoluteFile();
+        }
+        return new File(parentDir, path).getAbsoluteFile();
     }
     
     private static boolean clearDirectories(File[] files, boolean recursive) {

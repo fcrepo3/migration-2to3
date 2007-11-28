@@ -15,11 +15,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import fedora.common.FaultException;
+
 import fedora.server.config.ServerConfiguration;
 import fedora.server.storage.translation.DODeserializer;
+import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
+import fedora.utilities.file.FileUtil;
 
 /**
  * Non-threadsafe interface to a local repository.
@@ -36,8 +40,18 @@ public class LocalRepoObjectStore
     public static final String DEFAULT_DESERIALIZER =
             "fedora.server.storage.translation.FOXML1_0DODeserializer";
     
+    /** 
+     * The serializer that will be used if none is specified;
+     * <code>fedora.server.storage.translation.FOXML1_1DOSerializer</code>
+     */
+    public static final String DEFAULT_SERIALIZER =
+            "fedora.server.storage.translation.FOXML1_1DOSerializer";
+    
     /** The deserializer to use. */
     private final DODeserializer m_deserializer;
+   
+    /** The serializer to use. */
+    private final DOSerializer m_serializer;
    
     /** The base directory where Fedora objects are stored. */
     private final File m_objectStoreBase;
@@ -48,6 +62,9 @@ public class LocalRepoObjectStore
     /** The connection this instance uses. */
     private final Connection m_conn;
    
+    /** The prepared statement this instance uses. */
+    private final PreparedStatement m_st;
+   
     /**
      * Creates an instance.
      * 
@@ -55,10 +72,12 @@ public class LocalRepoObjectStore
      * @param jdbcJar a jar containing the appropriate jdbc driver, or null
      *                if it's already in the classpath.
      * @param deserializer the deserializer to use.
+     * @param serializer the serializer to use.
      */
     public LocalRepoObjectStore(File fedoraHome, File jdbcJar,
-            DODeserializer deserializer) {
+            DODeserializer deserializer, DOSerializer serializer) {
         m_deserializer = deserializer;
+        m_serializer = serializer;
         ServerConfiguration serverConfig = RepoUtil.getServerConfig(fedoraHome);
         m_objectStoreBase = RepoUtil.getObjectStoreBase(
                 serverConfig, fedoraHome);
@@ -68,10 +87,14 @@ public class LocalRepoObjectStore
         try {
             RepoUtil.buildObjectPathsIfNeeded(m_conn, m_objectStoreBase,
                     m_deserializer);
+            m_st = m_conn.prepareStatement(
+                    "SELECT path FROM objectPaths WHERE token = ?");
             initialized = true;
+        } catch (SQLException e) {
+            throw new FaultException("Error preparing statement", e);
         } finally {
             if (!initialized) {
-                RepoUtil.close(m_conn);
+                close();
             }
         }
     }
@@ -85,6 +108,8 @@ public class LocalRepoObjectStore
      *                             driver, if it's not already in the classpath.
      *   deserializer (required) - the deserializer to use;
      *                             default is DEFAULT_DESERIALIZER.
+     *   serializer   (required) - the serializer to use;
+     *                             default is DEFAULT_SERIALIZER.
      * </pre>
      * 
      * @param props the properties.
@@ -93,7 +118,9 @@ public class LocalRepoObjectStore
         this(new File(ConfigUtil.getRequiredString(props, "fedoraHome")),
                 ConfigUtil.getOptionalFile(props, "jdbcJar", null),
                 (DODeserializer) ConfigUtil.construct(props, "deserializer", 
-                DEFAULT_DESERIALIZER));
+                DEFAULT_DESERIALIZER),
+                (DOSerializer) ConfigUtil.construct(props, "serializer", 
+                DEFAULT_SERIALIZER));
     }
     
     //---
@@ -104,30 +131,30 @@ public class LocalRepoObjectStore
      * {@inheritDoc}
      */
     public DigitalObject getObject(String pid) {
-        String path = getPath(pid);
-        if (path == null) {
+        File file = getFile(pid);
+        if (file == null) {
             return null;
         }
-        // TODO: deserialize object at path and return it
-        return null;
+        return RepoUtil.readObject(m_deserializer, file);
     }
 
     /**
      * {@inheritDoc}
      */
     public boolean replaceObject(DigitalObject obj) {
-        String path = getPath(obj.getPid());
-        if (path == null) {
+        File file = getFile(obj.getPid());
+        if (file == null) {
             return false;
         }
-        // TODO: serialize object to path and return true
-        return false;
+        RepoUtil.writeObject(m_serializer, obj, file);
+        return true;
     }
     
     /**
      * {@inheritDoc}
      */
     public void close() {
+        RepoUtil.close(m_st);
         RepoUtil.close(m_conn);
     }
     
@@ -159,22 +186,29 @@ public class LocalRepoObjectStore
     //---
     // Instance helpers
     //---
+    
+    private File getFile(String pid) {
+        String path = getPath(pid);
+        if (path == null) {
+            return null;
+        }
+        return FileUtil.getFile(m_objectStoreBase, path);
+    }
    
     private String getPath(String pid) {
-        PreparedStatement st = null;
+        ResultSet results = null;
         try {
-            st = m_conn.prepareStatement(
-                    "SELECT path FROM objectPaths WHERE token = %");
-            st.setString(1, pid);
-            ResultSet result = st.executeQuery();
-            if (!result.next()) {
+            m_st.setString(1, pid);
+            results = m_st.executeQuery();
+            if (!results.next()) {
                 return null;
             }
-            return result.getString(1);
+            return results.getString(1);
         } catch (SQLException e) {
-            throw new Error("Error querying database for object path", e);
+            throw new FaultException(
+                    "Error querying database for object path", e);
         } finally {
-            RepoUtil.close(st);
+            RepoUtil.close(results);
         }
     }
     

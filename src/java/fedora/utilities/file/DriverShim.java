@@ -19,6 +19,8 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 
+import fedora.common.FaultException;
+
 /**
  * Allows one to load a JDBC driver at runtime. java.sql.DriverManager will
  * refuse to use a driver not loaded by the system ClassLoader. The workaround
@@ -63,7 +65,7 @@ public class DriverShim
             loadAndRegister(new URL("jar:" + driverJarFile.toURI() + "!/"),
                     driverClassName);
         } catch (MalformedURLException wontHappen) {
-            throw new RuntimeException(wontHappen);
+            throw new FaultException(wontHappen);
         }
     }
 
@@ -84,11 +86,11 @@ public class DriverShim
                     driverClassName, true, urlCL).newInstance();
             DriverManager.registerDriver(new DriverShim(driver));
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new FaultException(e);
         } catch (InstantiationException e) {
-            throw new RuntimeException(e);
+            throw new FaultException(e);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new FaultException(e);
         }
     }
 

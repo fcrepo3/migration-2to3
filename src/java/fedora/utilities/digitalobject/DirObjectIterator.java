@@ -2,23 +2,11 @@ package fedora.utilities.digitalobject;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileInputStream;
-import java.io.IOException;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.apache.log4j.Logger;
-import org.xml.sax.SAXException;
-
-import fedora.server.errors.ServerException;
 import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.translation.DOTranslationUtility;
-import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.RecursiveFileIterator;
@@ -31,9 +19,6 @@ import fedora.utilities.file.RecursiveFileIterator;
 class DirObjectIterator
         implements Iterator<DigitalObject> {
 
-    /** Logger for this class. */
-    private static final Logger LOG = Logger.getLogger(DirObjectIterator.class);
-
     /** A file iterator starting at the source directory. */
     private final RecursiveFileIterator m_files;
 
@@ -43,8 +28,11 @@ class DirObjectIterator
     /** The next object (null when exhausted). */
     private DigitalObject m_next;
 
-    /** The most recently encountered file (null till next() is called). */
+    /** The file associated with the most last object returned by next(). */
     private File m_currentFile;
+
+    /** The file associated with the next object to be returned by next(). */
+    private File m_nextFile;
 
     /**
      * Constructs an instance.
@@ -63,7 +51,8 @@ class DirObjectIterator
     /**
      * Gets the most recently encountered file.
      * 
-     * @return the file, or null if next() hasn't been called yet.
+     * @return the file, or null if next() hasn't yet been called or
+     *         the iterator is empty.
      */
     public File currentFile() {
         return m_currentFile;
@@ -88,6 +77,7 @@ class DirObjectIterator
             throw new NoSuchElementException("Iterator exhausted");
         }
         DigitalObject current = m_next;
+        m_currentFile = m_nextFile;
         m_next = getNext();
         return current;
     }
@@ -105,51 +95,10 @@ class DirObjectIterator
 
     private DigitalObject getNext() {
         while (m_files.hasNext()) {
-            m_currentFile = m_files.next();
-            Exception err = null;
-            try {
-                DigitalObject obj = new BasicDigitalObject();
-                m_deserializer.deserialize(
-                        new FileInputStream(m_currentFile), obj, "UTF-8",
-                        DOTranslationUtility.DESERIALIZE_INSTANCE);
-                return obj;
-            } catch (IOException e) {
-                err = e;
-            } catch (ServerException e) {
-                err = e;
-            } finally {
-                if (err != null) {
-                    if (isXML(m_currentFile)) {
-                        LOG.warn("Skipping " + m_currentFile.getPath()
-                                + "; can't " + "deserialize", err);
-                    } else {
-                        LOG.debug("Skipping " + m_currentFile.getPath()
-                                + "; not XML");
-                    }
-                }
-            }
+            m_nextFile = m_files.next();
+            return RepoUtil.readObject(m_deserializer, m_nextFile);
         }
         return null;
-    }
-
-    //---
-    // Static helpers
-    //---
-
-    private boolean isXML(File file) {
-        try {
-            DocumentBuilderFactory factory
-                    = DocumentBuilderFactory.newInstance();
-            DocumentBuilder parser = factory.newDocumentBuilder();
-            parser.parse(file);
-            return true;
-        } catch (IOException e) {
-            return false;
-        } catch (ParserConfigurationException e) {
-            return false;
-        } catch (SAXException e) {
-            return false;
-        }
     }
 
 }

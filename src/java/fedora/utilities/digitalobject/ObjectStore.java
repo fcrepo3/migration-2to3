@@ -4,6 +4,8 @@
  */
 package fedora.utilities.digitalobject;
 
+import fedora.common.FaultException;
+
 import fedora.server.storage.types.DigitalObject;
 
 /**
@@ -19,16 +21,22 @@ public interface ObjectStore
      * 
      * @param pid the id of the object.
      * @return the object, or null if not found.
+     * @throws FaultException if the object existed, but could not
+     *                        be read or deserialized for any reason.
      */
-    DigitalObject getObject(String pid);
+    DigitalObject getObject(String pid)
+            throws FaultException;
 
     /**
      * Replaces a <code>DigitalObject</code> in the store.
      * 
      * @param obj the object to replace.
      * @return whether the object existed and was therefore replaced.
+     * @throws FaultException if the object existed, but could not
+     *                        be overwritten or serialized for any reason.
      */
-    boolean replaceObject(DigitalObject obj);
+    boolean replaceObject(DigitalObject obj)
+            throws FaultException;
     
     /**
      * Releases any resources allocated by this object.

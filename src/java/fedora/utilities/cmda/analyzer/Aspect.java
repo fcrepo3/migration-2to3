@@ -79,7 +79,7 @@ public enum Aspect {
                 return aspect;
             }
         }
-        throw new IllegalArgumentException(Messages.ERR_ASPECT_UNKNOWN + name);
+        throw new IllegalArgumentException("Unknown aspect: " + name);
     }
 
 }

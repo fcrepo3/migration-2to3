@@ -28,42 +28,6 @@ abstract class Messages {
     static final String ANALYZER_USAGE = BUNDLE.getString(
             "Analyzer.usage");
     
-    //---
-    // Error messages
-    //---
-
-    /** Error indicating analysis failed. */
-    static final String ERR_ANALYSIS_FAILED = BUNDLE.getString(
-            "err.analysis_failed");
-    
-    /** Error indicating the aspect is unknown. */
-    static final String ERR_ASPECT_UNKNOWN = BUNDLE.getString(
-            "err.aspect_unknown");
-    
-    /** Error indicating closing a file failed. */
-    static final String ERR_CLOSE_FILE_FAILED = BUNDLE.getString(
-            "err.close_file_failed");
-    
-    /** Error indicating configuration file was not found. */
-    static final String ERR_CONFIG_NOT_FOUND = BUNDLE.getString(
-            "err.config_not_found");
-    
-    /** Error indicating directory was not empty. */
-    static final String ERR_DIR_NONEMPTY = BUNDLE.getString(
-            "err.dir_nonempty");
-    
-    /** Error indicating directory creation failed. */
-    static final String ERR_MKDIR_FAILED = BUNDLE.getString(
-            "err.mkdir_failed");
-    
-    /** Error indicating serialization failure. */
-    static final String ERR_SERIALIZE_FAILED = BUNDLE.getString(
-            "err.serialize_failed");
-    
-    /** Error indicating file write failure. */
-    static final String ERR_WRITE_FILE_FAILED = BUNDLE.getString(
-            "err.write_file_failed");
-
     private static ResourceBundle loadBundle() {
         final String className = Messages.class.getName();
         final String bundleName = className.substring(

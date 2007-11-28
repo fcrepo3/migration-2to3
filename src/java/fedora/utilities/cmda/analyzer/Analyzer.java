@@ -15,15 +15,15 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import fedora.server.errors.ObjectIntegrityException;
-import fedora.server.errors.StreamIOException;
+import fedora.common.FaultException;
+
 import fedora.server.storage.translation.DOSerializer;
-import fedora.server.storage.translation.DOTranslationUtility;
 import fedora.server.storage.types.DatastreamXMLMetadata;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectLister;
+import fedora.utilities.digitalobject.RepoUtil;
 import fedora.utilities.file.FileUtil;
 
 import static fedora.utilities.cmda.analyzer.Constants.CHAR_ENCODING;
@@ -84,10 +84,10 @@ public class Analyzer {
 
     /**
      * The object lister that will be used if none is specified;
-     * <code>fedora.utilities.digitalobject.DirObjectLister</code>
+     * <code>fedora.utilities.digitalobject.LocalRepoObjectStore</code>
      */
     public static final String DEFAULT_OBJECT_LISTER
-            = "fedora.utilities.digitalobject.DirObjectLister";
+            = "fedora.utilities.digitalobject.LocalRepoObjectStore";
 
     /**
      * The serializer that will be used if none is specified;
@@ -215,33 +215,12 @@ public class Analyzer {
     //---
 
     private void serializeCModels() {
-        for (DigitalObject object : m_cModelNumber.keySet()) {
-            int num = m_cModelNumber.get(object).intValue();
+        for (DigitalObject obj : m_cModelNumber.keySet()) {
+            int num = m_cModelNumber.get(obj).intValue();
             String cModelFilename = CMODEL_PREFIX + num + CMODEL_SUFFIX;
             File file = new File(m_outputDir, cModelFilename);
             LOG.info("Serializing content model " + cModelFilename);
-            FileOutputStream out = null;
-            try {
-                out = new FileOutputStream(file);
-                m_serializer.getInstance().serialize(
-                        object, out, CHAR_ENCODING, 
-                        DOTranslationUtility.SERIALIZE_EXPORT_MIGRATE);
-            } catch (ObjectIntegrityException e) {
-                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
-            } catch (StreamIOException e) {
-                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
-            } catch (IOException e) {
-                throw new RuntimeException(Messages.ERR_SERIALIZE_FAILED, e);
-            } finally {
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        LOG.error(Messages.ERR_CLOSE_FILE_FAILED
-                                + file.getPath());
-                    }
-                }
-            }
+            RepoUtil.writeObject(m_serializer, obj, file);
         }
     }
 
@@ -251,15 +230,16 @@ public class Analyzer {
         if (writer == null) {
             m_cModelCount++;
             m_cModelNumber.put(cModel, new Integer(m_cModelCount));
+            File file = new File(m_outputDir,
+                    MEMBER_PREFIX + m_cModelCount + MEMBER_SUFFIX);
             try {
                 writer = new PrintWriter(new OutputStreamWriter(
-                        new FileOutputStream(
-                                new File(m_outputDir, MEMBER_PREFIX
-                                        + m_cModelCount + MEMBER_SUFFIX))));
+                        new FileOutputStream(file)));
                 m_memberLists.put(cModel, writer);
                 printHeader(writer, cModel);
             } catch (IOException e) {
-                throw new RuntimeException(Messages.ERR_WRITE_FILE_FAILED, e);
+                throw new FaultException("Error writing file: "
+                        + file.getPath(), e);
             }
         }
         writer.println(object.getPid());
@@ -288,7 +268,7 @@ public class Analyzer {
         if (!outputDir.exists()) {
             outputDir.mkdir();
             if (!outputDir.exists()) {
-                throw new RuntimeException(Messages.ERR_MKDIR_FAILED
+                throw new FaultException("Failed to create directory: "
                         + outputDir.getPath());
             }
         }
@@ -296,7 +276,7 @@ public class Analyzer {
             if (clearOutputDir) {
                 FileUtil.clearDirectory(outputDir, true);
             } else {
-                throw new RuntimeException(Messages.ERR_DIR_NONEMPTY
+                throw new FaultException("Directory not empty: "
                         + outputDir.getPath());
             }
         }
@@ -333,6 +313,7 @@ public class Analyzer {
             System.exit(0);
         } else {
             if (args[0].equals("--help")) {
+                // TODO: write analyzer help in Messages.properties
                 System.out.println(Messages.ANALYZER_HELP);
                 System.exit(0);
             }
@@ -353,7 +334,7 @@ public class Analyzer {
                         ConfigUtil.getOptionalBoolean(props,
                         CLEAR_OUTPUT_DIR_PROPERTY, false));
             } catch (FileNotFoundException e) {
-                LOG.error(Messages.ERR_CONFIG_NOT_FOUND + args[0]);
+                LOG.error("Configuration file not found: " + args[0]);
                 exitFatally();
             } catch (IllegalArgumentException e) {
                 LOG.error(e.getMessage());
@@ -361,7 +342,7 @@ public class Analyzer {
                 // CHECKSTYLE:OFF
             } catch (Throwable th) {
                 // CHECKSTYLE:ON
-                LOG.error(Messages.ERR_ANALYSIS_FAILED, th);
+                LOG.error("Analysis failed due to an unexpected error", th);
                 exitFatally();
             }
         }
