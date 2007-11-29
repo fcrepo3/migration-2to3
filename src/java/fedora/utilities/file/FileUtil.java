@@ -5,6 +5,12 @@
 package fedora.utilities.file;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import fedora.common.FaultException;
 
 /**
  * Utility methods for working with files and directories.
@@ -12,6 +18,9 @@ import java.io.File;
  * @author Chris Wilper
  */
 public abstract class FileUtil {
+   
+    /** Buffer size, in bytes, for reads/writes; 4096. */
+    public static final int READ_BUFFER_SIZE = 4096;
    
     /**
      * Removes all files (and optionally, directories) within the given
@@ -41,6 +50,54 @@ public abstract class FileUtil {
         }
         return new File(parentDir, path).getAbsoluteFile();
     }
+   
+    /**
+     * Writes (or overwrites) the given file with the content of the
+     * given stream.
+     * 
+     * @param source
+     * @param file
+     */
+    public static void writeFile(InputStream source, File file) {
+        OutputStream sink = null;
+        try {
+            sink = new FileOutputStream(file);
+        } catch (IOException e) {
+            throw new FaultException("Error opening file for writing: "
+                    + file.getPath(), e);
+        }
+        sendBytes(source, sink);
+    }
+    
+    /**
+     * Sends all bytes from one stream to another.
+     *
+     * Both streams will be closed when this method returns, whether it was 
+     * ultimately successful or not.
+     *
+     * @param  source         the stream to read from.
+     * @param  sink           the stream to write to.
+     * @throws FaultException if the operation failed due to an I/O error.
+     */
+    public static void sendBytes(InputStream source, OutputStream sink)
+            throws FaultException {
+        try {
+            byte[] buf = new byte[READ_BUFFER_SIZE];
+            int len;
+            while ((len = source.read(buf)) > 0 ) {
+                sink.write(buf, 0, len);
+            }
+        } catch (IOException e) {
+            throw new FaultException("Error sending bytes from InputStream "
+                    + "to OutputStream", e);
+        } finally {
+            //TODO: close these
+            /*
+            close(source);
+            close(sink);
+            */
+        }
+    }
     
     private static boolean clearDirectories(File[] files, boolean recursive) {
         for (File file : files) {
@@ -64,5 +121,5 @@ public abstract class FileUtil {
         }
         return true;
     }
-
+    
 }

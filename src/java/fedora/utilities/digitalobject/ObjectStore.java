@@ -4,6 +4,8 @@
  */
 package fedora.utilities.digitalobject;
 
+import java.io.InputStream;
+
 import fedora.common.FaultException;
 
 import fedora.server.storage.types.DigitalObject;
@@ -17,7 +19,7 @@ public interface ObjectStore
         extends ObjectLister {
    
     /**
-     * Gets a <code>DigitalObject</code> in the store.
+     * Gets a digital object in the store.
      * 
      * @param pid the id of the object.
      * @return the object, or null if not found.
@@ -28,7 +30,7 @@ public interface ObjectStore
             throws FaultException;
 
     /**
-     * Replaces a <code>DigitalObject</code> in the store.
+     * Replaces a digital object in the store.
      * 
      * @param obj the object to replace.
      * @return whether the object existed and was therefore replaced.
@@ -36,6 +38,20 @@ public interface ObjectStore
      *                        be overwritten or serialized for any reason.
      */
     boolean replaceObject(DigitalObject obj)
+            throws FaultException;
+    
+    /**
+     * Replaces a digital object in the store, given a stream.
+     * 
+     * @param pid the pid of the object to replace.
+     * @param source the stream containing the serialized object.
+     *               It will be closed when finished, regardless of whether
+     *               this method ultimately succeeds or fails.
+     * @return whether the object existed and was therefore replaced.
+     * @throws FaultException if the object existed, but could not
+     *                        be overwritten or serialized for any reason.
+     */
+    boolean replaceObject(String pid, InputStream source)
             throws FaultException;
     
     /**

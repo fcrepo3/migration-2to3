@@ -46,15 +46,14 @@ public class Transformer {
      * Creates an instance from properties.
      *
      * <pre>
-     *   pidFiles  (required)      - path to a file containing a list of PIDs
-     *                              (one per line).  Multiple files may be
-     *                              given here, in which case they should be
-     *                              delimited by space.  For each pidFile given,
-     *                              there must be a corresponding xsltFile.
-     *   xsltFiles (required)      - path to an xslt through each object in
-     *                              the corresponding list of PIDs should be
-     *                              passed.  Multiple files may also be given
-     *                              here, same rules as above.
+     *   pidFiles  (required) - space-delimited path(s) to one or more files,
+     *                          each containing a list of PIDs (one per line).
+     *                          For each path given, a corresponding xslt file
+     *                          must be given in xsltFiles.
+     *   xsltFiles (required) - space-delimited path(s) to one or more files,
+     *                          each consisting of an XSLT stylesheet through
+     *                          which the corresponding pid list should be
+     *                          passed.
      * </pre>
      *
      * @param props the properties.

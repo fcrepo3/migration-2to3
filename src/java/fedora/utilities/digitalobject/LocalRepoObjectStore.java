@@ -5,6 +5,7 @@
 package fedora.utilities.digitalobject;
 
 import java.io.File;
+import java.io.InputStream;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -137,7 +138,7 @@ public class LocalRepoObjectStore
         }
         return RepoUtil.readObject(m_deserializer, file);
     }
-
+    
     /**
      * {@inheritDoc}
      */
@@ -150,6 +151,18 @@ public class LocalRepoObjectStore
         return true;
     }
     
+    /**
+     * {@inheritDoc}
+     */
+    public boolean replaceObject(String pid, InputStream source) {
+        File file = getFile(pid);
+        if (file == null) {
+            return false;
+        }
+        FileUtil.writeFile(source, file);
+        return true;
+    }
+
     /**
      * {@inheritDoc}
      */
