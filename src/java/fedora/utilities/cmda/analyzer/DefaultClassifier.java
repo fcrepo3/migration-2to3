@@ -107,7 +107,7 @@ public class DefaultClassifier implements Classifier {
      * By default, a built-in PID generator will be used that generates
      * PIDs of the form: <code>demo:GeneratedPID#</code>, where #
      * is incremented for each new PID.  If a property is found named
-     * <code>pidGenerator</code>, the value specifies the PIDGenerator
+     * <code>pidGen</code>, the value specifies the PIDGenerator
      * class to use, and the class must have a constructor that accepts
      * a Properties object for configuration.
      *
