@@ -6,6 +6,8 @@ package fedora.utilities.config;
 
 import java.io.File;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import java.lang.reflect.InvocationTargetException;
@@ -25,7 +27,7 @@ public abstract class ConfigUtil {
     private static final Logger LOG = Logger.getLogger(ConfigUtil.class);
     
     /**
-     * Gets a required string from properties.
+     * Gets a required string from properties.  The value will be trimmed.
      * 
      * @param props properties in which to find the value.
      * @param name property name.
@@ -36,6 +38,11 @@ public abstract class ConfigUtil {
         String value = props.getProperty(name);
         if (value == null) {
             throw new IllegalArgumentException("Required property missing: "
+                    + name);
+        }
+        value = value.trim();
+        if (value.length() == 0) {
+            throw new IllegalArgumentException("Required property is empty: "
                     + name);
         }
         return value;
@@ -57,7 +64,7 @@ public abstract class ConfigUtil {
             return defaultValue;
         }
         try {
-            return Integer.parseInt(value);
+            return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Not an integer: " + value);
         }
@@ -77,8 +84,27 @@ public abstract class ConfigUtil {
         if (value == null) {
             return defaultValue;
         }
-        return new File(value);
+        return new File(value.trim());
     }
+    
+    /**
+     * Gets one or more required files from properties.
+     * 
+     * @param props properties in which to find the value.
+     * @param name property name.
+     * @return one or more files.
+     * @throws IllegalArgumentException if the property isn't found or
+     *         is empty.
+     */
+    public static List<File> getRequiredFiles(Properties props, String name) {
+        String value = getRequiredString(props, name);
+        List<File> list = new ArrayList<File>();
+        for (String path : value.split("\\s")) {
+            list.add(new File(path));
+        }
+        return list;
+    }
+            
   
     /**
      * Gets an optional boolean from properties.
@@ -96,6 +122,7 @@ public abstract class ConfigUtil {
         if (value == null) {
             return defaultValue;
         }
+        value = value.trim();
         if (value.equalsIgnoreCase("true")) {
             return true;
         } else if (value.equalsIgnoreCase("false")) {
@@ -122,6 +149,7 @@ public abstract class ConfigUtil {
         if (className == null) {
             className = defaultClassName;
         }
+        className = className.trim();
         // CHECKSTYLE:OFF
         try {
             Class<?> clazz = Class.forName(className);

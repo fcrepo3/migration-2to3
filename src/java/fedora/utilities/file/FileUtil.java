@@ -4,11 +4,14 @@
  */
 package fedora.utilities.file;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import org.apache.log4j.Logger;
 
 import fedora.common.FaultException;
 
@@ -21,6 +24,9 @@ public abstract class FileUtil {
    
     /** Buffer size, in bytes, for reads/writes; 4096. */
     public static final int READ_BUFFER_SIZE = 4096;
+    
+    /** Logger for this class. */
+    private static final Logger LOG = Logger.getLogger(FileUtil.class);
    
     /**
      * Removes all files (and optionally, directories) within the given
@@ -55,8 +61,9 @@ public abstract class FileUtil {
      * Writes (or overwrites) the given file with the content of the
      * given stream.
      * 
-     * @param source
-     * @param file
+     * @param source the stream to read from.
+     * @param file the file to write to.
+     * @throws FaultException if the operation failed due to an I/O error.
      */
     public static void writeFile(InputStream source, File file) {
         OutputStream sink = null;
@@ -84,18 +91,23 @@ public abstract class FileUtil {
         try {
             byte[] buf = new byte[READ_BUFFER_SIZE];
             int len;
-            while ((len = source.read(buf)) > 0 ) {
+            while ((len = source.read(buf)) > 0) {
                 sink.write(buf, 0, len);
             }
         } catch (IOException e) {
             throw new FaultException("Error sending bytes from InputStream "
                     + "to OutputStream", e);
         } finally {
-            //TODO: close these
-            /*
             close(source);
             close(sink);
-            */
+        }
+    }
+    
+    private static void close(Closeable stream) {
+        try {
+            stream.close();
+        } catch (IOException e) {
+            LOG.warn("Unable to close stream", e);
         }
     }
     

@@ -107,9 +107,9 @@ public class LocalRepoObjectStore
      *   fedoraHome   (required) - the Fedora home directory.
      *   jdbcJar      (optional) - a jar containing the appropriate jdbc
      *                             driver, if it's not already in the classpath.
-     *   deserializer (required) - the deserializer to use;
+     *   deserializer (optional) - the deserializer to use;
      *                             default is DEFAULT_DESERIALIZER.
-     *   serializer   (required) - the serializer to use;
+     *   serializer   (optional) - the serializer to use;
      *                             default is DEFAULT_SERIALIZER.
      * </pre>
      * 

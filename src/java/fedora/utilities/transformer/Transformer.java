@@ -4,11 +4,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
+
+import fedora.common.FaultException;
 
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
@@ -36,10 +37,14 @@ public class Transformer {
      *                 each associated stylesheet.
      * @param xsltFiles xslt files containing transformation rules for
      *                  each associated pid file.
+     * @throws IllegalArgumentException if pidFiles or xsltFiles are empty,
+     *         a file listed doesn't exist, or the number of pidFiles and
+     *         xsltFiles don't match.
      */
     public Transformer(List<File> pidFiles, List<File> xsltFiles) {
         m_pidFiles = pidFiles;
         m_xsltFiles = xsltFiles;
+        validateFiles();
     }
   
     /**
@@ -57,22 +62,98 @@ public class Transformer {
      * </pre>
      *
      * @param props the properties.
+     * @throws IllegalArgumentException if a required parameter is
+     *         unspecified, one of the specified files doesn't exist,
+     *         or the number of pidFiles and xsltFiles don't match.
      */
     public Transformer(Properties props) {
-        // TODO: initialize from properties
-        // m_classifier = (Classifier) ConfigUtil.construct(props,
-        //     CLASSIFIER_PROPERTY, DEFAULT_CLASSIFIER);
-        m_pidFiles = new ArrayList<File>();
-        m_xsltFiles = new ArrayList<File>();
+        m_pidFiles = ConfigUtil.getRequiredFiles(props, "pidFiles");
+        m_xsltFiles = ConfigUtil.getRequiredFiles(props, "xsltFiles");
+        validateFiles();
     }
    
     /**
-     * Run the transformations.
+     * Run all transformations.
+     * 
+     * @param store the store to read from/write to.
+     * @param dryRun if false, transformation should not overwrite original.
+     * @throws FaultException if transformation cannot complete for any reason.
      */
-    public void transformAll(ObjectStore store, boolean dryRun) {
-        // TODO: run transformation(s) as configured
+    public void transformAll(ObjectStore store, boolean dryRun)
+            throws FaultException {
+        LOG.info("Will transform " + m_pidFiles.size() + " batch(es) of "
+                + "objects");
+        int total = 0;
+        for (int i = 0; i < m_pidFiles.size(); i++) {
+            File pidFile = m_pidFiles.get(i);
+            File xsltFile = m_xsltFiles.get(i);
+            LOG.info("Transforming objects from " + pidFile.getPath()
+                    + " with " + xsltFile.getPath());
+            int batchCount = transformBatch(xsltFile, pidFile, store, dryRun);
+            LOG.info("Finished transforming batch of " + batchCount
+                    + "objects");
+            total += batchCount;
+        }
+        LOG.info("Transformation complete.  Transformed " + total
+                + " objects.");
+    }
+  
+    //---
+    // Instance helpers
+    //---
+    
+    private void validateFiles() {
+        if (m_pidFiles == null || m_xsltFiles == null) {
+            throw new IllegalArgumentException("pidFiles and xsltFiles "
+                    + "must both be given as non-null");
+        }
+        if (m_pidFiles.size() == 0 || m_xsltFiles.size() == 0) {
+            throw new IllegalArgumentException("pidFiles and xsltFiles "
+                    + "must be given as non-empty");
+        }
+        if (m_pidFiles.size() != m_xsltFiles.size()) {
+            throw new IllegalArgumentException("Number of pidFiles ("
+                    + m_pidFiles.size() + ") must match number of "
+                    + "xsltFiles (" + m_xsltFiles.size() + ")");
+        }
+        ensureReadable(m_pidFiles);
+        ensureReadable(m_xsltFiles);
+    }
+    
+    //---
+    // Static helpers
+    //---
+    
+    private static void ensureReadable(List<File> files) {
+        for (File file : files) {
+            if (!file.canRead()) {
+                throw new IllegalArgumentException("File does not exist "
+                        + "or cannot be read: " + file.getPath());
+            }
+        }
     }
 
+    /**
+     * Transform all objects in pidFile with the indicated xsltFile.
+     * 
+     * @param xsltFile the stylesheet to use for transforming the batch.
+     * @param pidFile a text file containing a list of pids, one per line.
+     * @param store the store to read from/write to.
+     * @param dryRun if false, transformation should not overwrite original.
+     * @return the number of transformations done.
+     * @throws FaultException if transformation cannot complete for any reason.
+     */
+    private static int transformBatch(File xsltFile, File pidFile,
+            ObjectStore store, boolean dryRun) {
+        return 0;
+        // TODO: implement, throwing FaultException(msg, e) in event of failure
+        // NOTE:
+        // - When reading pidlist files, blank lines and those beginning
+        //   with # should be ignored.
+        // - If dryrun, don't send output to store.replaceObject;
+        //   just make sure the transformation succeeds
+    }
+    
     //---
     // Command-line
     //---
