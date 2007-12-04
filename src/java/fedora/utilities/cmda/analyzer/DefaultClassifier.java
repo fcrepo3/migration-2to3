@@ -2,7 +2,6 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.UnsupportedEncodingException;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -82,11 +81,15 @@ public class DefaultClassifier implements Classifier {
      * classification, and the given generator for the purpose of assigning
      * pids to generated content models.
      * 
-     * @param aspects aspects to use for classification.
+     * @param ignoreAspects aspects to ignore for classification.
+     *        NOTE: BDefPIDs, BMechPIDs, and BindingKeyAssignments are
+     *        required and will NOT be ignored, even if specified here.
+     *        Also, MIMETypes and FormatURIs will be ignored automatically
+     *        if DatastreamIDs is ignored.
      * @param pidGen the pid generator to use.
      */
-    public DefaultClassifier(Set<Aspect> aspects, PIDGenerator pidGen) {
-        setAspects(aspects);
+    public DefaultClassifier(Set<Aspect> ignoreAspects, PIDGenerator pidGen) {
+        setAspects(ignoreAspects);
         m_pidGen = pidGen;
         m_contentModels = new HashMap<Signature, DigitalObject>();
     }
@@ -100,7 +103,14 @@ public class DefaultClassifier implements Classifier {
      * By default, all aspects are considered for the purpose of
      * classification.  To ignore one or more aspects, the <code>ignoreAspects
      * </code> property should be used.  The value, if specified, should contain
-     * a comma-delimited list of <code>{@link Aspect}</code>s to ignore.
+     * a space-delimited list of any of the following:
+     * <ul>
+     *   <li> OrigContentModel</li>
+     *   <li> DatastreamIDs (will cause MIMETypes and FormatURIs to be 
+     *   ignored)</li>
+     *   <li> MIMETypes</li>
+     *   <li> FormatURIs</li>
+     * </ul>
      *
      * <p><b>Specifying the PIDGenerator</b>
      * <br/>
@@ -114,7 +124,7 @@ public class DefaultClassifier implements Classifier {
      * @param props the properties to get the configuration from.
      */
     public DefaultClassifier(Properties props) {
-        setAspects(getAspectsFromProperties(props));
+        setAspects(getIgnoreAspects(props));
         m_pidGen = (PIDGenerator) ConfigUtil.construct(props, "pidGen",
                 DEFAULT_PID_GENERATOR);
         m_contentModels = new HashMap<Signature, DigitalObject>();
@@ -135,15 +145,32 @@ public class DefaultClassifier implements Classifier {
     // Instance helpers
     //---
 
-    private void setAspects(Set<Aspect> aspects) {
-        for (Aspect aspect : aspects) {
-            logExplicitUse(aspect);
+    private void setAspects(Set<Aspect> ignoreAspects) {
+        m_aspects = new HashSet<Aspect>();
+        Aspect[] allAspects = Aspect.values();
+        for (int i = 0; i < allAspects.length; i++) {
+            m_aspects.add(allAspects[i]);
         }
-        addImplicit(aspects, Aspect.BINDING_KEY_ASSIGNMENTS, Aspect.BMECH_PIDS);
-        addImplicit(aspects, Aspect.BMECH_PIDS, Aspect.BDEF_PIDS);
-        addImplicit(aspects, Aspect.MIME_TYPES, Aspect.DATASTREAM_IDS);
-        addImplicit(aspects, Aspect.FORMAT_URIS, Aspect.DATASTREAM_IDS);
-        m_aspects = aspects;
+        for (Aspect aspect : ignoreAspects) {
+            if (aspect == Aspect.ORIG_CONTENT_MODEL
+                    || aspect == Aspect.MIME_TYPES
+                    || aspect == Aspect.FORMAT_URIS) {
+                LOG.info("Ignoring aspect: " + aspect.getName());
+                m_aspects.remove(aspect);
+            } else if (aspect == Aspect.DATASTREAM_IDS) {
+                String n = Aspect.DATASTREAM_IDS.getName();
+                LOG.info("Ignoring aspect: " + n);
+                m_aspects.remove(aspect);
+                LOG.info("Ignoring aspect: " + Aspect.MIME_TYPES.getName()
+                        + " (because ignoring " + n + ")");
+                m_aspects.remove(Aspect.MIME_TYPES);
+                LOG.info("Ignoring aspect: " + Aspect.FORMAT_URIS.getName()
+                        + " (because ignoring " + n + ")");
+                m_aspects.remove(Aspect.FORMAT_URIS);
+            } else {
+                LOG.warn("NOT ignoring required aspect: " + aspect.getName());
+            }
+        }
     }
     
     private DigitalObject getContentModel(Signature signature) {
@@ -186,65 +213,18 @@ public class DefaultClassifier implements Classifier {
     // Static helpers
     //---
 
-    private static void addImplicit(Set<Aspect> aspects, Aspect cause,
-            Aspect implied) {
-        if (aspects.contains(cause) && !aspects.contains(implied)) {
-            logImplicitUse(implied, cause);
-            aspects.add(implied);
-        }
-    }
-
-    private static void logExplicitUse(Aspect explicit) {
-        LOG.info("Using " + explicit.getName());
-    }
-
-    private static void logImplicitUse(Aspect implicit, Aspect impliedBy) {
-        LOG.info("Using " + implicit.getName() + " because using "
-                + impliedBy.getName());
-    }
-
-    private static Set<Aspect> getAspectsFromProperties(Properties props) {
-        Set<Aspect> aspects = new HashSet<Aspect>();
-        aspects.addAll(Arrays.asList(Aspect.values()));
+    private static Set<Aspect> getIgnoreAspects(Properties props) {
+        Set<Aspect> ignoreAspects = new HashSet<Aspect>();
         String ignorePropVal = props.getProperty("ignoreAspects");
         if (ignorePropVal != null) {
             LOG.info("Configuration specifies ignoreAspects: " + ignorePropVal);
-            Set<Aspect> toRemove = new HashSet<Aspect>();
-            for (String name : ignorePropVal.split(",")) {
-                Aspect aspect = Aspect.fromName(name);
-                logExplicitIgnore(aspect);
-                toRemove.add(Aspect.fromName(name));
+            for (String name : ignorePropVal.trim().split("\\s+")) {
+                ignoreAspects.add(Aspect.fromName(name));
             }
-            addImplicitIgnore(toRemove, Aspect.BMECH_PIDS,
-                    Aspect.BDEF_PIDS);
-            addImplicitIgnore(toRemove, Aspect.BINDING_KEY_ASSIGNMENTS,
-                    Aspect.BMECH_PIDS);
-            addImplicitIgnore(toRemove, Aspect.MIME_TYPES,
-                    Aspect.DATASTREAM_IDS);
-            addImplicitIgnore(toRemove, Aspect.FORMAT_URIS,
-                    Aspect.DATASTREAM_IDS);
-            aspects.removeAll(toRemove);
         }
-        return aspects;
+        return ignoreAspects;
     }
     
-    private static void logExplicitIgnore(Aspect explicit) {
-        LOG.info("Ignoring " + explicit.getName());
-    }
-
-    private static void addImplicitIgnore(Set<Aspect> toRemove, Aspect implied,
-            Aspect cause) {
-        if (toRemove.contains(cause) && !toRemove.contains(implied)) {
-            logImplicitIgnore(implied, cause);
-            toRemove.add(implied);
-        }
-    }
-    
-    private static void logImplicitIgnore(Aspect implicit, Aspect impliedBy) {
-        LOG.info("Ignoring " + implicit.getName() + " because ignoring "
-                + impliedBy.getName());
-    }
-
     @SuppressWarnings("unchecked")
     private static Set<String> getBDefPIDs(DigitalObject obj) {
         Set<String> set = new HashSet<String>();
