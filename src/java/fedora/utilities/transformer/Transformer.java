@@ -178,7 +178,6 @@ public class Transformer {
             System.exit(0);
         } else {
             if (args[0].equals("--help")) {
-                // TODO: complete transformer help in Messages.properties
                 System.out.println(Messages.TRANSFORMER_HELP);
                 System.exit(0);
             }

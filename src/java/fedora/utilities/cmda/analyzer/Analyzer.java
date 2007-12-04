@@ -313,7 +313,6 @@ public class Analyzer {
             System.exit(0);
         } else {
             if (args[0].equals("--help")) {
-                // TODO: complete analyzer help in Messages.properties
                 System.out.println(Messages.ANALYZER_HELP);
                 System.exit(0);
             }

@@ -88,6 +88,17 @@ public abstract class ConfigUtil {
     }
     
     /**
+     * Gets a required file from properties.
+     * 
+     * @param props properties in which to find the value.
+     * @param name property name.
+     * @return the value.
+     */
+    public static File getRequiredFile(Properties props, String name) {
+        return getRequiredFiles(props, name).get(0);
+    }
+    
+    /**
      * Gets one or more required files from properties.
      * 
      * @param props properties in which to find the value.

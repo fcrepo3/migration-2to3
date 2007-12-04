@@ -58,7 +58,7 @@
   <target name="generator-classes">
     <mkdir dir="build/generator-classes"/>
     <javac srcdir="src/java" destdir="build/generator-classes" 
-           includes="fedora/utilities/cmda/generator/**" 
+           includes="fedora/utilities/cmda/generator/**,fedora/utilities/digitalobject/**" 
            classpathref="generator.compile.classpath"
            optimize="${optimize}" 
            debug="${debug}"
@@ -69,6 +69,7 @@
     <copy todir="build/generator-classes">
       <fileset dir="src/java">
         <include name="**/*.properties"/>
+        <include name="**/*.xslt"/>
       </fileset>
     </copy>
   </target>
@@ -128,17 +129,45 @@
       </manifest>
     </jar>
   </target>
-  
-  <!-- generator-jar -->
-  <target name="generator-jar"
+ 
+  <!-- generator-lib -->
+  <target name="generator-lib"
           depends="generator-classes"
-          description="Build generator.jar in dist/">
-    <mkdir dir="dist"/>
-    <jar jarfile="dist/generator.jar"
-         basedir="build/generator-classes"/>
+          description="Build generator.jar in build/generator-lib">
+    <mkdir dir="build/generator-lib"/>
+    <jar jarfile="build/generator-lib/generator-lib.jar"
+         basedir="build/generator-classes">
+      <manifest>
+        <attribute name="Main-Class" value="fedora.utilities.cmda.generator.Generator"/>
+      </manifest>
+    </jar>
   </target>
 
-  <!-- analyzer-lib -->
+  <!-- generator-dist -->
+  <target name="generator-dist"
+          depends="generator-lib"
+          description="Build single jar executable for generator in dist/">
+    <mkdir dir="build/generator-dist"/>
+    <unjar src="${lib.one-jar}" dest="build/generator-dist"/>
+    <mkdir dir="build/generator-dist/main"/>
+    <copy file="build/generator-lib/generator-lib.jar" todir="build/generator-dist/main"/>
+    <mkdir dir="build/generator-dist/lib"/>
+    <copy file="${lib.log4j}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.fedora-server}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.jrdf}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.commons-httpclient}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.commons-logging}" todir="build/generator-dist/lib"/>
+    <copy file="src/config/log4j.properties" todir="build/generator-dist"/>
+    <mkdir dir="dist"/>
+    <jar jarfile="dist/generator.jar"
+         basedir="build/generator-dist">
+      <manifest>
+        <attribute name="Main-Class" value="com.simontuffs.onejar.Boot"/>
+      </manifest>
+    </jar>
+  </target> 
+
+  <!-- transformer-lib -->
   <target name="transformer-lib"
           depends="transformer-classes"
           description="Build transformer.jar in build/transformer-lib">
@@ -177,7 +206,7 @@
   
   <!-- dist -->
   <target name="dist"
-          depends="analyzer-dist, generator-jar, transformer-dist"
+          depends="analyzer-dist, generator-dist, transformer-dist"
           description="Build all distributable jars in dist/">
   </target>
 
