@@ -30,6 +30,17 @@ public interface ObjectStore
             throws FaultException;
 
     /**
+     * Gets an InputStream for a digital object in the store.
+     * 
+     * @param pid the id of the object.
+     * @return an input stream, or null if the object is not found.
+     * @throws FaultException if the object existed, but could not
+     *                        be read for any reason.
+     */
+    InputStream getObjectStream(String pid)
+            throws FaultException;
+
+    /**
      * Replaces a digital object in the store.
      * 
      * @param obj the object to replace.

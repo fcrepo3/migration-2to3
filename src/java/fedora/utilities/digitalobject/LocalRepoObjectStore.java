@@ -5,6 +5,8 @@
 package fedora.utilities.digitalobject;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 import java.util.Iterator;
@@ -137,6 +139,21 @@ public class LocalRepoObjectStore
             return null;
         }
         return RepoUtil.readObject(m_deserializer, file);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public InputStream getObjectStream(String pid) {
+        File file = getFile(pid);
+        if (file == null) {
+            return null;
+        }
+        try {
+            return new FileInputStream(file);
+        } catch (IOException e) {
+            throw new FaultException("Error reading: " + file.getPath(), e);
+        }
     }
     
     /**
