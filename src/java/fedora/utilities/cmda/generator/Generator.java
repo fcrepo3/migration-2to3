@@ -1,6 +1,7 @@
 package fedora.utilities.cmda.generator;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -11,6 +12,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -23,6 +26,7 @@ import fedora.server.storage.types.DigitalObject;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
 import fedora.utilities.digitalobject.RepoUtil;
+import fedora.utilities.file.FileUtil;
 
 /**
  * Utility to generate transformation rules for instance objects to
@@ -53,20 +57,7 @@ public class Generator {
                 + "foxml-upgrade-cmda.xslt";
         InputStream in = Generator.class.getClassLoader().getResourceAsStream(
                 xsltPath);
-        try {
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(in, "UTF-8"));
-            StringBuffer buf = new StringBuffer();
-            String line = reader.readLine();
-            while (line != null) {
-                buf.append(line + "\n");
-                line = reader.readLine();
-            }
-            XSLT_TEMPLATE = buf.toString();
-        } catch (IOException e) {
-            throw new FaultException("Error reading from jar: "
-                    + xsltPath, e);
-        }
+        XSLT_TEMPLATE = FileUtil.readTextStream(in);
     }
     
     /**
@@ -155,19 +146,68 @@ public class Generator {
     }
     
     private void generateBMechs(File bMechsFile, String key) {
-        // TODO: write the bmechs as necessary
-        if (bMechsFile == null || key == null && m_store == null) {
-            throw new IllegalArgumentException();
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(bMechsFile), "UTF-8"));
+            generateBMechs(reader, key);
+            reader.close();
+        } catch (IOException e) {
+            throw new FaultException("Error generating BMech(s) from "
+                    + bMechsFile.getPath(), e);
         }
-        // Format of bMechsFile: (ignore blank lines and those starting w/#)
-        //   OLD_BMECH demo:BMech1
-        //   NEW_BMECH demo:GeneratedBMech1
-        //   NEW_PARTS FULL_SIZE=DS1 MEDIUM_SIZE=DS2
-        //   ...
-        // Algorithm:
-        //    for each (OLD_BMECH, NEW_BMECH, NEW_PARTS) found in bMechsFile,
-        //      read OLD_BMECH from repo and write NEW_BMECH to file
-        //      with NEW_PARTS.  Output filename is cmodel-key.bmech-n.xml
+    }
+    
+    private void generateBMechs(BufferedReader reader, String key)
+            throws IOException {
+        String line = reader.readLine();
+        String oldBMech = null;
+        String newBMech = null;
+        int i = 0;
+        while (line != null) {
+            line = line.trim();
+            if (line.length() > 0 && !line.startsWith("#")) {
+                String[] parts = line.split(" ");
+                if (parts[0].equals("OLD_BMECH")) {
+                    oldBMech = parts[1];
+                } else if (parts[0].equals("NEW_BMECH")) {
+                    newBMech = parts[1];
+                } else if (parts[0].equals("NEW_PARTS")) {
+                    i++;
+                    File outFile = new File(m_sourceDir, "cmodel-" + key
+                            + ".bmech" + i + ".xml");
+                    generateBMech(oldBMech, newBMech,
+                            parseNewParts(parts), outFile);
+                }
+            }
+            line = reader.readLine();
+        }
+    }
+    
+    private Map<String, String> parseNewParts(String[] parts) {
+        Map<String, String> map = new HashMap<String, String>();
+        for (int i = 1; i < parts.length; i++) {
+            String[] newPart = parts[i].split("=");
+            map.put(newPart[0], newPart[1]);
+        }
+        return map;
+    }
+   
+    private void generateBMech(String oldPID, String newPID, 
+            Map<String, String> newParts, File outFile) 
+            throws IOException {
+        // FIXME: This is just a test; it's not functionally correct.
+        //        What should happen is this:
+        //        - deserialize the object, change the pid,
+        //        - read, change, and write the necessary datastream XML,
+        //        - then serialize to the file using m_serializer.
+        String src = FileUtil.readTextStream(m_store.getObjectStream(oldPID));
+        String dst = src.replaceAll(oldPID, newPID);
+        for (String oldPart : newParts.keySet()) {
+            String newPart = newParts.get(oldPart);
+            dst = dst.replaceAll(oldPart, newPart);
+        }
+        FileUtil.writeFile(new ByteArrayInputStream(dst.getBytes("UTF-8")),
+                outFile);
     }
     
     //---

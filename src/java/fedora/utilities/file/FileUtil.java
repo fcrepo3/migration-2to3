@@ -4,11 +4,13 @@
  */
 package fedora.utilities.file;
 
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
@@ -27,6 +29,9 @@ public abstract class FileUtil {
     
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(FileUtil.class);
+   
+    /** System-dependent line separator. */
+    private static final String CR = System.getProperty("line.separator");
    
     /**
      * Removes all files (and optionally, directories) within the given
@@ -102,6 +107,35 @@ public abstract class FileUtil {
             close(sink);
         }
     }
+   
+    /**
+     * Reads the content of a UTF-8 encoded text stream into a string.
+     * 
+     * The stream will be closed when this method returns, whether it
+     * was ultimately successful or not.
+     * 
+     * @param source the source stream.
+     * @return the string.
+     * @throws FaultException if the operation failed due to an I/O error.
+     */
+    public static String readTextStream(InputStream source) {
+        try {
+            StringBuffer buf = new StringBuffer();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    source, "UTF-8"));
+            String line = reader.readLine();
+            while (line != null) {
+                buf.append(line + CR);
+                line = reader.readLine();
+            }
+            return buf.toString();
+        } catch (IOException e) {
+            throw new FaultException("Error reading text stream", e);
+        } finally {
+            close(source);
+        }
+    }
+   
     
     private static void close(Closeable stream) {
         try {
