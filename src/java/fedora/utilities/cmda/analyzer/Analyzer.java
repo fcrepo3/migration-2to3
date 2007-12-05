@@ -201,6 +201,7 @@ public class Analyzer {
                 }
             }
             serializeCModels();
+            writeBMechDirectives();
         } finally {
             closeMemberLists();
             LOG.info("Classification finished.");
@@ -219,8 +220,30 @@ public class Analyzer {
             int num = m_cModelNumber.get(obj).intValue();
             String cModelFilename = CMODEL_PREFIX + num + CMODEL_SUFFIX;
             File file = new File(m_outputDir, cModelFilename);
-            LOG.info("Serializing content model " + cModelFilename);
+            LOG.info("Serializing content model " + obj.getPid());
             RepoUtil.writeObject(m_serializer, obj, file);
+        }
+    }
+    
+    private void writeBMechDirectives() {
+        for (DigitalObject obj : m_cModelNumber.keySet()) {
+            int num = m_cModelNumber.get(obj).intValue();
+            String directives = m_classifier.getBMechDirectives(obj.getPid());
+            if (directives != null) {
+                LOG.info("Writing BMech directives for content model "
+                        + obj.getPid());
+                String bMechsFilename = CMODEL_PREFIX + num + ".bmechs.txt";
+                File file = new File(m_outputDir, bMechsFilename);
+                try {
+                    PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+                            new FileOutputStream(file), "UTF-8"));
+                    writer.println(directives);
+                    writer.close();
+                } catch (IOException e) {
+                    throw new FaultException("Error writing BMech directives: "
+                            + file.getPath(), e);
+                }
+            }
         }
     }
 

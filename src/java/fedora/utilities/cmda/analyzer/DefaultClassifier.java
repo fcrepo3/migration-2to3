@@ -45,6 +45,9 @@ public class DefaultClassifier implements Classifier {
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(
             DefaultClassifier.class);
+   
+    /** Line separator for this platform. */
+    private static final String CR = System.getProperty("line.separator");
 
     /** Control group to use for Inline XML datastreams. */
     private static final String INLINE_DS_CONTROL_GROUP = "X";
@@ -76,6 +79,9 @@ public class DefaultClassifier implements Classifier {
     /** Map of content models used for each signature. */
     private Map<Signature, DigitalObject> m_contentModels;
 
+    /** Map of member signatures used for each content model (keyed by PID). */
+    private Map<String, Signature> m_memberSignatures;
+
     /**
      * Constructs an instance that uses the given aspects for the purpose of
      * classification, and the given generator for the purpose of assigning
@@ -92,6 +98,7 @@ public class DefaultClassifier implements Classifier {
         setAspects(ignoreAspects);
         m_pidGen = pidGen;
         m_contentModels = new HashMap<Signature, DigitalObject>();
+        m_memberSignatures = new HashMap<String, Signature>();
     }
 
     /**
@@ -128,6 +135,7 @@ public class DefaultClassifier implements Classifier {
         m_pidGen = (PIDGenerator) ConfigUtil.construct(props, "pidGen",
                 DEFAULT_PID_GENERATOR);
         m_contentModels = new HashMap<Signature, DigitalObject>();
+        m_memberSignatures = new HashMap<String, Signature>();
     }
 
     //---
@@ -140,10 +148,37 @@ public class DefaultClassifier implements Classifier {
     public DigitalObject getContentModel(DigitalObject obj) {
         return getContentModel(getSignature(obj));
     }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public String getBMechDirectives(String cModelPID) {
+        return getBMechDirectives(m_memberSignatures.get(cModelPID));
+    }
 
     //---
     // Instance helpers
     //---
+    
+    private String getBMechDirectives(Signature memberSignature) {
+        Set<String> bMechPIDs = memberSignature.getBMechPIDs();
+        if (bMechPIDs == null || bMechPIDs.size() == 0) {
+            return null;
+        }
+        StringBuffer out = new StringBuffer();
+        for (String origPID : bMechPIDs) {
+            out.append("OLD_BMECH " + origPID + CR);
+            out.append("NEW_BMECH " + m_pidGen.getNextPID().toString() + CR);
+            out.append("NEW_PARTS");
+            Set<String> assignments = 
+                memberSignature.getBindingKeyAssignments(origPID);
+            for (String assignment : assignments) {
+                out.append(" " + assignment);
+            }
+            out.append(CR + CR);
+        }
+        return out.toString();
+    }
 
     private void setAspects(Set<Aspect> ignoreAspects) {
         m_aspects = new HashSet<Aspect>();
@@ -153,20 +188,11 @@ public class DefaultClassifier implements Classifier {
         }
         for (Aspect aspect : ignoreAspects) {
             if (aspect == Aspect.ORIG_CONTENT_MODEL
+                    || aspect == Aspect.DATASTREAM_IDS
                     || aspect == Aspect.MIME_TYPES
                     || aspect == Aspect.FORMAT_URIS) {
                 LOG.info("Ignoring aspect: " + aspect.getName());
                 m_aspects.remove(aspect);
-            } else if (aspect == Aspect.DATASTREAM_IDS) {
-                String n = Aspect.DATASTREAM_IDS.getName();
-                LOG.info("Ignoring aspect: " + n);
-                m_aspects.remove(aspect);
-                LOG.info("Ignoring aspect: " + Aspect.MIME_TYPES.getName()
-                        + " (because ignoring " + n + ")");
-                m_aspects.remove(Aspect.MIME_TYPES);
-                LOG.info("Ignoring aspect: " + Aspect.FORMAT_URIS.getName()
-                        + " (because ignoring " + n + ")");
-                m_aspects.remove(Aspect.FORMAT_URIS);
             } else {
                 LOG.warn("NOT ignoring required aspect: " + aspect.getName());
             }
@@ -185,13 +211,22 @@ public class DefaultClassifier implements Classifier {
         addCompModelDSIfNeeded(cModelObj, signature);
         addInlineDS(cModelObj, "CLASS-DESCRIPTION",
                 "Technical description of the class of objects assigned to"
-                + " this content model", "<class-description>\n" 
-                + signature.toString() + "\n</class-description>");
+                + " this content model", "<class-description>" + CR
+                + signature.toString() + CR + "</class-description>");
         m_contentModels.put(signature, cModelObj);
+        m_memberSignatures.put(cModelObj.getPid(), signature);
         return cModelObj;
     }
 
     private Signature getSignature(DigitalObject obj) {
+        Set<String> dsIDs = new HashSet<String>();
+        if (m_aspects.contains(Aspect.DATASTREAM_IDS)) {
+            dsIDs.addAll(getDatastreamIDs(obj));
+        }
+        Map<String, Set<String>> assignments = getBindingKeyAssignments(obj);
+        
+        addBoundDatastreams(assignments, dsIDs); 
+        
         return new Signature(
                 m_aspects.contains(Aspect.ORIG_CONTENT_MODEL)
                         ? obj.getContentModelId() : null,
@@ -199,19 +234,30 @@ public class DefaultClassifier implements Classifier {
                         ? getBDefPIDs(obj) : null,
                 m_aspects.contains(Aspect.BMECH_PIDS)
                         ? getBMechPIDs(obj) : null,
-                m_aspects.contains(Aspect.BINDING_KEY_ASSIGNMENTS)
-                        ? getBindingKeyAssignments(obj) : null,
-                m_aspects.contains(Aspect.DATASTREAM_IDS)
-                        ? getDatastreamIDs(obj) : null,
+                assignments,
+                dsIDs,
                 m_aspects.contains(Aspect.MIME_TYPES)
-                        ? getMIMETypes(obj) : null,
+                        ? getMIMETypes(obj, dsIDs) : null,
                 m_aspects.contains(Aspect.FORMAT_URIS)
-                        ? getFormatURIs(obj) : null);
+                        ? getFormatURIs(obj, dsIDs) : null);
     }
 
     //---
     // Static helpers
     //---
+    
+    private static void addBoundDatastreams(
+            Map<String, Set<String>> assignments, Set<String> dsIDs) {
+        // make sure required datastreams include those indicated by
+        // binding key assignments
+        for (Set<String> mappings : assignments.values()) {
+            for (String mapping : mappings) {
+                String[] parts = mapping.split("=");
+                dsIDs.add(parts[1]);
+            }
+        }
+    }
+    
 
     private static Set<Aspect> getIgnoreAspects(Properties props) {
         Set<Aspect> ignoreAspects = new HashSet<Aspect>();
@@ -281,11 +327,10 @@ public class DefaultClassifier implements Classifier {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, String> getMIMETypes(DigitalObject obj) {
+    private static Map<String, String> getMIMETypes(DigitalObject obj,
+            Set<String> dsIDs) {
         Map<String, String> map = new HashMap<String, String>();
-        Iterator dsIDs = obj.datastreamIdIterator();
-        while (dsIDs.hasNext()) {
-            String dsID = (String) dsIDs.next();
+        for (String dsID : dsIDs) {
             Datastream ds = getLatestDSVersion(obj, dsID);
             map.put(dsID, ds.DSMIME);
         }
@@ -293,11 +338,10 @@ public class DefaultClassifier implements Classifier {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, String> getFormatURIs(DigitalObject obj) {
+    private static Map<String, String> getFormatURIs(DigitalObject obj,
+            Set<String> dsIDs) {
         Map<String, String> map = new HashMap<String, String>();
-        Iterator dsIDs = obj.datastreamIdIterator();
-        while (dsIDs.hasNext()) {
-            String dsID = (String) dsIDs.next();
+        for (String dsID : dsIDs) {
             Datastream ds = getLatestDSVersion(obj, dsID);
             map.put(dsID, ds.DSFormatURI);
         }
@@ -373,14 +417,15 @@ public class DefaultClassifier implements Classifier {
             String pid) {
         StringBuffer out = new StringBuffer();
         out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri 
-                + "\" xmlns:rel=\"" + Constants.RELS_EXT.uri + "\">\n");
+                + "\" xmlns:rel=\"" + Constants.RELS_EXT.uri + "\">" + CR);
         out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid
-                + "\">\n");
+                + "\">" + CR);
         if (signature.getBDefPIDs() != null) {
             for (String bDefPID : signature.getBDefPIDs()) {
                 out.append("    <rel:" + Constants.RELS_EXT
-                        .HAS_FORMAL_CONTENT_MODEL.localName
-                        + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>\n");
+                        .HAS_BDEF.localName
+                        + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>"
+                        + CR);
             }
         }
         out.append("  </rdf:Description>");
@@ -390,10 +435,10 @@ public class DefaultClassifier implements Classifier {
 
     private static String getCompModelDSContent(Signature signature) {
         StringBuffer out = new StringBuffer();
-        out.append("<dsCompositeModel>\n");
+        out.append("<dsCompositeModel>" + CR);
         if (signature.getDatastreamIDs() != null) {
             for (String dsID : signature.getDatastreamIDs()) {
-                out.append("  <dsTypeModel ID=\"" + dsID + "\">\n");
+                out.append("  <dsTypeModel ID=\"" + dsID + "\">" + CR);
                 String mimeType = signature.getMIMEType(dsID);
                 String formatURI = signature.getFormatURI(dsID);
                 if (mimeType != null || formatURI != null) {
@@ -404,9 +449,9 @@ public class DefaultClassifier implements Classifier {
                     if (formatURI != null) {
                         out.append(" FORMAT_URIS=\"" + formatURI + "\"");
                     }
-                    out.append("/>\n");
+                    out.append("/>" + CR);
                 }
-                out.append("  </dsTypeModel>\n");
+                out.append("  </dsTypeModel>" + CR);
             }
         }
         out.append("</dsCompositeModel>");
