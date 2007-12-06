@@ -1,16 +1,31 @@
 package fedora.utilities.transformer;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.List;
 import java.util.Properties;
+
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 
 import org.apache.log4j.Logger;
 
 import fedora.common.FaultException;
 
+import fedora.server.storage.types.DigitalObject;
+import fedora.server.validation.DOValidatorSchematronResult;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
 
@@ -80,11 +95,13 @@ public class Transformer {
      * @throws FaultException if transformation cannot complete for any reason.
      */
     public void transformAll(ObjectStore store, boolean dryRun)
-            throws FaultException {
+            throws FaultException 
+    {
         LOG.info("Will transform " + m_pidFiles.size() + " batch(es) of "
                 + "objects");
         int total = 0;
-        for (int i = 0; i < m_pidFiles.size(); i++) {
+        for (int i = 0; i < m_pidFiles.size(); i++) 
+        {
             File pidFile = m_pidFiles.get(i);
             File xsltFile = m_xsltFiles.get(i);
             LOG.info("Transforming objects from " + pidFile.getPath()
@@ -144,7 +161,43 @@ public class Transformer {
      * @throws FaultException if transformation cannot complete for any reason.
      */
     private static int transformBatch(File xsltFile, File pidFile,
-            ObjectStore store, boolean dryRun) {
+            ObjectStore store, boolean dryRun) 
+    {
+        BufferedReader pids;
+        String pidLine = null;
+        int numTransformed = 0;
+        try
+        {
+            TransformerFactory tfactory = TransformerFactory.newInstance();
+            javax.xml.transform.Transformer vtransformer = tfactory.newTransformer(new StreamSource(xsltFile));
+            pids = new BufferedReader(new FileReader(pidFile));
+            while ((pidLine = pids.readLine()) != null)
+            {
+                pidLine = pidLine.trim();
+                if (pidLine.startsWith("#")) continue;
+                if (pidLine.length() == 0) continue;
+                transformOne(vtransformer, pidLine, store, dryRun);
+                numTransformed ++;
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            // Although this shouldn't happen since we already checked that the file was readable.
+            throw new FaultException("Unable to read file: "+ pidFile.getName(), e);
+        }
+        catch (IOException e)
+        {
+            throw new FaultException("Error reading from pid file: "+ pidFile.getName(), e);
+        }
+        catch (TransformerConfigurationException e)
+        {
+            throw new FaultException("Error processing XSLT file: "+ xsltFile.getName(), e);
+        }
+        catch (TransformerException e)
+        {
+            throw new FaultException("Error transforming object " + pidLine + 
+                                     "using XSLT file: "+ xsltFile.getName(), e);
+        }
         return 0;
         // TODO: implement, throwing FaultException(msg, e) in event of failure
         // NOTE:
@@ -152,6 +205,34 @@ public class Transformer {
         //   with # should be ignored.
         // - If dryrun, don't send output to store.replaceObject;
         //   just make sure the transformation succeeds
+    }
+    
+    /**
+     * Transform one object with the indicated xsltFile.
+     * 
+     * @param xsltTransformer the compiled form of the stylesheet to use for transforming the object.
+     * @param pid the pid of the object to transform.
+     * @param store the store to read from/write to.
+     * @param dryRun if false, transformation should not overwrite original.
+     * @return the number of transformations done.
+     * @throws TransformerException 
+     */
+    private static int transformOne(javax.xml.transform.Transformer xsltTransformer, String pid,
+            ObjectStore store, boolean dryRun) throws TransformerException 
+    {
+        InputStream str = store.getObjectStream(pid);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        StreamResult res = new StreamResult(out);
+        xsltTransformer.transform(new StreamSource(str), res);        
+        if (!dryRun)
+        {
+            store.replaceObject(pid, new ByteArrayInputStream(out.toByteArray()));
+        }
+        else
+        {
+            System.out.println(out.toString());
+        }
+        return 0;
     }
     
     //---
@@ -163,7 +244,8 @@ public class Transformer {
      * 
      * @param args command-line arguments.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) 
+    {
         // HACK: make DOTranslatorUtility happy
         System.setProperty("fedoraServerHost", "localhost");
         System.setProperty("fedoraServerPort", "80");
@@ -173,43 +255,77 @@ public class Transformer {
             System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
             System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
         }
-        if (args.length != 1) {
+        Properties props = new Properties();
+        if (args.length == 0) 
+        {
             System.out.println(Messages.TRANSFORMER_USAGE);
             System.exit(0);
-        } else {
-            if (args[0].equals("--help")) {
-                System.out.println(Messages.TRANSFORMER_HELP);
-                System.exit(0);
+        } 
+        else if (args[0].equals("--help")) 
+        {
+            System.out.println(Messages.TRANSFORMER_HELP);
+            System.exit(0);
+        }
+        if (args[0].equals("--")) 
+        {
+            props = System.getProperties();
+        }
+        else if (args.length == 1 && !args[0].startsWith("-"))
+        {
+            try
+            {
+                props.load(new FileInputStream(args[0]));
             }
-            try {
-                Properties props;
-                if (args[0].equals("--")) {
-                    props = System.getProperties();
-                } else {
-                    props = new Properties();
-                    props.load(new FileInputStream(args[0]));
-                }
-                Transformer transformer = new Transformer(props);
-                ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
-                        "objectStore",
-                        "fedora.utilities.digitalobject.LocalRepoObjectStore");
-                boolean dryRun = ConfigUtil.getOptionalBoolean(props, "dryRun",
-                        false);
-                transformer.transformAll(store, dryRun);
-            } catch (FileNotFoundException e) {
+            catch (FileNotFoundException e)
+            {
                 LOG.error("Configuration file not found: " + args[0]);
                 exitFatally();
-            } catch (IllegalArgumentException e) {
-                LOG.error(e.getMessage());
+            } 
+            catch (IOException e)
+            {
+                LOG.error("Error reading configuration file: " + args[0]);
                 exitFatally();
-                // CHECKSTYLE:OFF
-            } catch (Throwable th) {
-                // CHECKSTYLE:ON
-                LOG.error("Transformation failed due to an unexpected error",
-                        th);
-                exitFatally();
+            } 
+        }
+        else  // args specified on Command Line
+        {
+            int argPtr = 0;
+            String home = System.getenv("FEDORA_HOME");
+            props.setProperty("fedoraHome", home);
+            while (argPtr < args.length)
+            {
+                argPtr += processArg(args, argPtr, props);
             }
         }
+        try {
+            Transformer transformer = new Transformer(props);
+            ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
+                    "objectStore",
+                    "fedora.utilities.digitalobject.LocalRepoObjectStore");
+            boolean dryRun = true; //ConfigUtil.getOptionalBoolean(props, "dryRun",
+                  //  false);
+            transformer.transformAll(store, dryRun);
+        } 
+        catch (IllegalArgumentException e) {
+            LOG.error(e.getMessage());
+            exitFatally();
+            // CHECKSTYLE:OFF
+        } 
+        catch (Throwable th) {
+            // CHECKSTYLE:ON
+            LOG.error("Transformation failed due to an unexpected error", th);
+            exitFatally();
+        }
+    }
+    
+    private static int processArg(String[] args, int argPtr, Properties props)
+    {
+        if (args[argPtr].equals("-dryrun"))     { props.setProperty("dryRun", "true"); return(1);}
+        if (args[argPtr].equals("-xsl"))        { props.setProperty("xsltFiles", args[argPtr+1]); return(2);}
+        if (args[argPtr].equals("-jdbcJar"))    { props.setProperty("jdbcJar", args[argPtr+1]); return(2); }
+        if (args[argPtr].equals("-fedoraHome")) { props.setProperty("fedoraHome", args[argPtr+1]); return(2); }
+        if (!args[argPtr].startsWith("-"))      { props.setProperty("pidFiles", args[argPtr]); return(1);}
+        return 0;
     }
     
     private static void exitFatally() {
