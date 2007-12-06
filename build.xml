@@ -78,7 +78,7 @@
   <target name="transformer-classes">
     <mkdir dir="build/transformer-classes"/>
     <javac srcdir="src/java" destdir="build/transformer-classes" 
-           includes="fedora/utilities/transformer/**" 
+           includes="fedora/utilities/transformer/**,fedora/utilities/digitalobject/**" 
            classpathref="transformer.compile.classpath"
            optimize="${optimize}" 
            debug="${debug}"

@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 
 import org.apache.log4j.Logger;
 
@@ -74,11 +76,36 @@ public abstract class FileUtil {
         OutputStream sink = null;
         try {
             sink = new FileOutputStream(file);
+            sendBytes(source, sink);
         } catch (IOException e) {
             throw new FaultException("Error opening file for writing: "
                     + file.getPath(), e);
+        } finally {
+            close(source);
+            close(sink);
         }
-        sendBytes(source, sink);
+    }
+   
+    /**
+     * Writes (or overwrites) the given file (using UTF-8 encoding) with the 
+     * content of the given string.
+     * 
+     * @param source the string to write.
+     * @param file the file to write to.
+     * @throws FaultException if the operation failed due to an I/O error.
+     */
+    public static void writeTextFile(String source, File file) {
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter(new OutputStreamWriter(
+                    new FileOutputStream(file), "UTF-8"));
+            writer.print(source);
+        } catch (IOException e) {
+            throw new FaultException("Error writing text to file: "
+                    + file.getPath(), e);
+        } finally {
+            close(writer);
+        }
     }
     
     /**
@@ -135,9 +162,14 @@ public abstract class FileUtil {
             close(source);
         }
     }
-   
-    
-    private static void close(Closeable stream) {
+
+    /**
+     * Closes a stream if it's non-null, logging a warning if an error is
+     * encountered.
+     * 
+     * @param stream the stream to close.
+     */
+    public static void close(Closeable stream) {
         try {
             stream.close();
         } catch (IOException e) {

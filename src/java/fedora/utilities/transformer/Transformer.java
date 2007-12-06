@@ -1,3 +1,4 @@
+
 package fedora.utilities.transformer;
 
 import java.io.BufferedReader;
@@ -16,7 +17,6 @@ import java.util.Properties;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
@@ -24,36 +24,35 @@ import org.apache.log4j.Logger;
 
 import fedora.common.FaultException;
 
-import fedora.server.storage.types.DigitalObject;
-import fedora.server.validation.DOValidatorSchematronResult;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
+import fedora.utilities.file.FileUtil;
 
 /**
  * Utility to apply transformation rules to Fedora objects.
- *
+ * 
  * @author Chris Wilper
  */
 public class Transformer {
-    
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Transformer.class);
-   
+
     /** PID files this instance will run with. */
     private final List<File> m_pidFiles;
-    
+
     /** Corresponding XSLT files this instance will use. */
     private final List<File> m_xsltFiles;
-    
+
     /**
      * Creates an instance.
      * 
-     * @param pidFiles pid files identifying objects to transform for
-     *                 each associated stylesheet.
-     * @param xsltFiles xslt files containing transformation rules for
-     *                  each associated pid file.
-     * @throws IllegalArgumentException if pidFiles or xsltFiles are empty,
-     *         a file listed doesn't exist, or the number of pidFiles and
+     * @param pidFiles pid files identifying objects to transform for each
+     *        associated stylesheet.
+     * @param xsltFiles xslt files containing transformation rules for each
+     *        associated pid file.
+     * @throws IllegalArgumentException if pidFiles or xsltFiles are empty, a
+     *         file listed doesn't exist, or the number of pidFiles and
      *         xsltFiles don't match.
      */
     public Transformer(List<File> pidFiles, List<File> xsltFiles) {
@@ -61,10 +60,10 @@ public class Transformer {
         m_xsltFiles = xsltFiles;
         validateFiles();
     }
-  
+
     /**
      * Creates an instance from properties.
-     *
+     * 
      * <pre>
      *   pidFiles  (required) - space-delimited path(s) to one or more files,
      *                          each containing a list of PIDs (one per line).
@@ -75,18 +74,18 @@ public class Transformer {
      *                          which the corresponding pid list should be
      *                          passed.
      * </pre>
-     *
+     * 
      * @param props the properties.
-     * @throws IllegalArgumentException if a required parameter is
-     *         unspecified, one of the specified files doesn't exist,
-     *         or the number of pidFiles and xsltFiles don't match.
+     * @throws IllegalArgumentException if a required parameter is unspecified,
+     *         one of the specified files doesn't exist, or the number of
+     *         pidFiles and xsltFiles don't match.
      */
     public Transformer(Properties props) {
         m_pidFiles = ConfigUtil.getRequiredFiles(props, "pidFiles");
         m_xsltFiles = ConfigUtil.getRequiredFiles(props, "xsltFiles");
         validateFiles();
     }
-   
+
     /**
      * Run all transformations.
      * 
@@ -95,30 +94,27 @@ public class Transformer {
      * @throws FaultException if transformation cannot complete for any reason.
      */
     public void transformAll(ObjectStore store, boolean dryRun)
-            throws FaultException 
-    {
+            throws FaultException {
         LOG.info("Will transform " + m_pidFiles.size() + " batch(es) of "
                 + "objects");
         int total = 0;
-        for (int i = 0; i < m_pidFiles.size(); i++) 
-        {
+        for (int i = 0; i < m_pidFiles.size(); i++) {
             File pidFile = m_pidFiles.get(i);
             File xsltFile = m_xsltFiles.get(i);
-            LOG.info("Transforming objects from " + pidFile.getPath()
-                    + " with " + xsltFile.getPath());
+            LOG.info("Transforming objects in " + pidFile.getName()
+                    + " with " + xsltFile.getName());
             int batchCount = transformBatch(xsltFile, pidFile, store, dryRun);
             LOG.info("Finished transforming batch of " + batchCount
-                    + "objects");
+                    + " objects");
             total += batchCount;
         }
-        LOG.info("Transformation complete.  Transformed " + total
-                + " objects.");
+        LOG.info("Finished transforming all " + total + " objects.");
     }
-  
+
     //---
     // Instance helpers
     //---
-    
+
     private void validateFiles() {
         if (m_pidFiles == null || m_xsltFiles == null) {
             throw new IllegalArgumentException("pidFiles and xsltFiles "
@@ -136,11 +132,11 @@ public class Transformer {
         ensureReadable(m_pidFiles);
         ensureReadable(m_xsltFiles);
     }
-    
+
     //---
     // Static helpers
     //---
-    
+
     private static void ensureReadable(List<File> files) {
         for (File file : files) {
             if (!file.canRead()) {
@@ -161,44 +157,36 @@ public class Transformer {
      * @throws FaultException if transformation cannot complete for any reason.
      */
     private static int transformBatch(File xsltFile, File pidFile,
-            ObjectStore store, boolean dryRun) 
-    {
-        BufferedReader pids;
+            ObjectStore store, boolean dryRun) {
+        BufferedReader pids = null;
         String pidLine = null;
         int numTransformed = 0;
-        try
-        {
+        try {
             TransformerFactory tfactory = TransformerFactory.newInstance();
-            javax.xml.transform.Transformer vtransformer = tfactory.newTransformer(new StreamSource(xsltFile));
+            javax.xml.transform.Transformer vtransformer =
+                    tfactory.newTransformer(new StreamSource(xsltFile));
             pids = new BufferedReader(new FileReader(pidFile));
-            while ((pidLine = pids.readLine()) != null)
-            {
+            while ((pidLine = pids.readLine()) != null) {
                 pidLine = pidLine.trim();
-                if (pidLine.startsWith("#")) continue;
-                if (pidLine.length() == 0) continue;
+                if (pidLine.length() == 0 || pidLine.startsWith("#")) {
+                    continue;
+                }
                 transformOne(vtransformer, pidLine, store, dryRun);
-                numTransformed ++;
+                numTransformed++;
             }
+            return numTransformed;
+        } catch (IOException e) {
+            throw new FaultException("Error reading from pid file: "
+                    + pidFile.getName(), e);
+        } catch (TransformerConfigurationException e) {
+            throw new FaultException("Error processing XSLT file: "
+                    + xsltFile.getName(), e);
+        } catch (TransformerException e) {
+            throw new FaultException("Error transforming object " + pidLine
+                    + "using XSLT file: " + xsltFile.getName(), e);
+        } finally {
+            FileUtil.close(pids);
         }
-        catch (FileNotFoundException e)
-        {
-            // Although this shouldn't happen since we already checked that the file was readable.
-            throw new FaultException("Unable to read file: "+ pidFile.getName(), e);
-        }
-        catch (IOException e)
-        {
-            throw new FaultException("Error reading from pid file: "+ pidFile.getName(), e);
-        }
-        catch (TransformerConfigurationException e)
-        {
-            throw new FaultException("Error processing XSLT file: "+ xsltFile.getName(), e);
-        }
-        catch (TransformerException e)
-        {
-            throw new FaultException("Error transforming object " + pidLine + 
-                                     "using XSLT file: "+ xsltFile.getName(), e);
-        }
-        return 0;
         // TODO: implement, throwing FaultException(msg, e) in event of failure
         // NOTE:
         // - When reading pidlist files, blank lines and those beginning
@@ -206,46 +194,46 @@ public class Transformer {
         // - If dryrun, don't send output to store.replaceObject;
         //   just make sure the transformation succeeds
     }
-    
+
     /**
      * Transform one object with the indicated xsltFile.
      * 
-     * @param xsltTransformer the compiled form of the stylesheet to use for transforming the object.
+     * @param xsltTransformer the compiled form of the stylesheet to use for
+     *        transforming the object.
      * @param pid the pid of the object to transform.
      * @param store the store to read from/write to.
      * @param dryRun if false, transformation should not overwrite original.
      * @return the number of transformations done.
-     * @throws TransformerException 
+     * @throws TransformerException
      */
-    private static int transformOne(javax.xml.transform.Transformer xsltTransformer, String pid,
-            ObjectStore store, boolean dryRun) throws TransformerException 
-    {
+    private static int transformOne(
+            javax.xml.transform.Transformer xsltTransformer, String pid,
+            ObjectStore store, boolean dryRun)
+            throws TransformerException {
         InputStream str = store.getObjectStream(pid);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         StreamResult res = new StreamResult(out);
-        xsltTransformer.transform(new StreamSource(str), res);        
-        if (!dryRun)
-        {
-            store.replaceObject(pid, new ByteArrayInputStream(out.toByteArray()));
-        }
-        else
-        {
-            System.out.println(out.toString());
+        xsltTransformer.transform(new StreamSource(str), res);
+        if (!dryRun) {
+            LOG.info("Transformed and replaced " + pid);
+            store.replaceObject(pid,
+                    new ByteArrayInputStream(out.toByteArray()));
+        } else {
+            LOG.info("Transformed " + pid);
         }
         return 0;
     }
-    
+
     //---
     // Command-line
     //---
-    
+
     /**
      * Command-line entry point for the analyzer.
      * 
      * @param args command-line arguments.
      */
-    public static void main(String[] args) 
-    {
+    public static void main(String[] args) {
         // HACK: make DOTranslatorUtility happy
         System.setProperty("fedoraServerHost", "localhost");
         System.setProperty("fedoraServerPort", "80");
@@ -255,79 +243,94 @@ public class Transformer {
             System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
             System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
         }
+        transformAllFromProperties(getTransformationProperties(args));
+    }
+    
+    private static Properties getTransformationProperties(String[] args) {
         Properties props = new Properties();
-        if (args.length == 0) 
-        {
+        if (args.length == 0) {
             System.out.println(Messages.TRANSFORMER_USAGE);
             System.exit(0);
-        } 
-        else if (args[0].equals("--help")) 
-        {
+        } else if (args[0].equals("--help")) {
             System.out.println(Messages.TRANSFORMER_HELP);
             System.exit(0);
         }
-        if (args[0].equals("--")) 
-        {
+        if (args[0].equals("--")) {
             props = System.getProperties();
-        }
-        else if (args.length == 1 && !args[0].startsWith("-"))
-        {
-            try
-            {
-                props.load(new FileInputStream(args[0]));
-            }
-            catch (FileNotFoundException e)
-            {
-                LOG.error("Configuration file not found: " + args[0]);
-                exitFatally();
-            } 
-            catch (IOException e)
-            {
-                LOG.error("Error reading configuration file: " + args[0]);
-                exitFatally();
-            } 
-        }
-        else  // args specified on Command Line
-        {
+        } else if (args.length == 1 && !args[0].startsWith("-")) {
+            props = getPropertiesFromFile(new File(args[0]));
+        } else {
+            // args specified on Command Line
             int argPtr = 0;
             String home = System.getenv("FEDORA_HOME");
             props.setProperty("fedoraHome", home);
-            while (argPtr < args.length)
-            {
+            while (argPtr < args.length) {
                 argPtr += processArg(args, argPtr, props);
             }
         }
+        return props;
+    }
+    
+    private static Properties getPropertiesFromFile(File configFile) {
+        Properties props = new Properties();
+        try {
+            props.load(new FileInputStream(configFile));
+        } catch (FileNotFoundException e) {
+            LOG.error("Configuration file not found: "
+                    + configFile.getPath());
+            exitFatally();
+        } catch (IOException e) {
+            LOG.error("Error reading configuration file: "
+                    + configFile.getPath());
+            exitFatally();
+        }
+        return props;
+    }
+    
+    private static void transformAllFromProperties(Properties props) {
         try {
             Transformer transformer = new Transformer(props);
             ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
                     "objectStore",
                     "fedora.utilities.digitalobject.LocalRepoObjectStore");
-            boolean dryRun = true; //ConfigUtil.getOptionalBoolean(props, "dryRun",
-                  //  false);
+            boolean dryRun = ConfigUtil.getOptionalBoolean(props, "dryRun",
+                    false);
             transformer.transformAll(store, dryRun);
-        } 
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             LOG.error(e.getMessage());
             exitFatally();
             // CHECKSTYLE:OFF
-        } 
-        catch (Throwable th) {
+        } catch (Throwable th) {
             // CHECKSTYLE:ON
             LOG.error("Transformation failed due to an unexpected error", th);
             exitFatally();
         }
     }
-    
-    private static int processArg(String[] args, int argPtr, Properties props)
-    {
-        if (args[argPtr].equals("-dryrun"))     { props.setProperty("dryRun", "true"); return(1);}
-        if (args[argPtr].equals("-xsl"))        { props.setProperty("xsltFiles", args[argPtr+1]); return(2);}
-        if (args[argPtr].equals("-jdbcJar"))    { props.setProperty("jdbcJar", args[argPtr+1]); return(2); }
-        if (args[argPtr].equals("-fedoraHome")) { props.setProperty("fedoraHome", args[argPtr+1]); return(2); }
-        if (!args[argPtr].startsWith("-"))      { props.setProperty("pidFiles", args[argPtr]); return(1);}
+
+    private static int processArg(String[] args, int argPtr, Properties props) {
+        if (args[argPtr].equalsIgnoreCase("-dryrun")) {
+            props.setProperty("dryRun", "true");
+            return (1);
+        }
+        if (args[argPtr].equals("-xsl")) {
+            props.setProperty("xsltFiles", args[argPtr + 1]);
+            return (2);
+        }
+        if (args[argPtr].equals("-jdbcJar")) {
+            props.setProperty("jdbcJar", args[argPtr + 1]);
+            return (2);
+        }
+        if (args[argPtr].equals("-fedoraHome")) {
+            props.setProperty("fedoraHome", args[argPtr + 1]);
+            return (2);
+        }
+        if (!args[argPtr].startsWith("-")) {
+            props.setProperty("pidFiles", args[argPtr]);
+            return (1);
+        }
         return 0;
     }
-    
+
     private static void exitFatally() {
         System.exit(1);
     }
