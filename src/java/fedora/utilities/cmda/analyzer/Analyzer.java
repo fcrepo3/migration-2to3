@@ -192,17 +192,52 @@ public class Analyzer {
         setOutputDir(outputDir, clearOutputDir);
         LOG.info("Classification started.");
         int objectCount = 0;
+        PrintWriter noCModelWriter;
+        PrintWriter bMechWriter;
+        PrintWriter bDefWriter;
+        try {
+            noCModelWriter = new PrintWriter(new OutputStreamWriter(
+                    new FileOutputStream(new File(outputDir, "nocmodel.txt")),
+                    "UTF-8"));
+            noCModelWriter.println("# The following objects will be upgraded "
+                    + "with no content model");
+            bMechWriter = new PrintWriter(new OutputStreamWriter(
+                    new FileOutputStream(new File(outputDir, "bmechs.txt")),
+                    "UTF-8"));
+            bMechWriter.println("# The following Behavior Mechanism objects"
+                    + " will be upgraded.");
+            bDefWriter = new PrintWriter(new OutputStreamWriter(
+                    new FileOutputStream(new File(outputDir, "bdefs.txt")),
+                    "UTF-8"));
+            bDefWriter.println("# The following Behavior Definition objects"
+                    + " will be upgraded.");
+        } catch (IOException e) {
+            throw new FaultException("Error opening file for writing", e);
+        }
         try {
             for (DigitalObject object : lister) {
                 if (object.isFedoraObjectType(DigitalObject.FEDORA_OBJECT)) {
                     DigitalObject cModel = m_classifier.getContentModel(object);
-                    recordMembership(object, cModel);
-                    objectCount++;
+                    if (cModel == null) {
+                        noCModelWriter.println(object.getPid());
+                    } else {
+                        recordMembership(object, cModel);
+                    }
+                } else if (object.isFedoraObjectType(
+                        DigitalObject.FEDORA_BMECH_OBJECT)) {
+                    bMechWriter.println(object.getPid());
+                } else if (object.isFedoraObjectType(
+                        DigitalObject.FEDORA_BDEF_OBJECT)) {
+                    bDefWriter.println(object.getPid());
                 }
+                objectCount++;
             }
             serializeCModels();
             writeBMechDirectives();
         } finally {
+            noCModelWriter.close();
+            bMechWriter.close();
+            bDefWriter.close();
             closeMemberLists();
             LOG.info("Classification finished.");
             LOG.info("Total objects analyzed: " + objectCount);
@@ -237,6 +272,10 @@ public class Analyzer {
                 try {
                     PrintWriter writer = new PrintWriter(new OutputStreamWriter(
                             new FileOutputStream(file), "UTF-8"));
+                    writer.println("# The following BMechs will be copied and "
+                            + "written as FOXML1.1");
+                    writer.println("# with new PIDs and part names as given "
+                            + "below");
                     writer.println(directives);
                     writer.close();
                 } catch (IOException e) {
@@ -259,6 +298,8 @@ public class Analyzer {
                 writer = new PrintWriter(new OutputStreamWriter(
                         new FileOutputStream(file)));
                 m_memberLists.put(cModel, writer);
+                writer.println("# The following objects will be assigned to "
+                        + "cmodel-" + m_cModelCount);
                 printHeader(writer, cModel);
             } catch (IOException e) {
                 throw new FaultException("Error writing file: "

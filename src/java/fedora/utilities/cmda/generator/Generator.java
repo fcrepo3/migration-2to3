@@ -36,8 +36,11 @@ public class Generator {
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Generator.class);
    
-    /** Contains the base stylesheet. */
+    /** Contains the base stylesheet for upgrading + setting new cmodel. */
     private static final String XSLT_TEMPLATE;
+   
+    /** Contains the base stylesheet for upgrading (no cmodel). */
+    private static final String XSLT_NOCMODEL;
    
     /** Where the original BMechs can be read from. */
     private final ObjectStore m_store;
@@ -53,11 +56,13 @@ public class Generator {
     
     static {
         // read the xslt template from the jar into XSLT_TEMPLATE
-        final String xsltPath =  "fedora/utilities/cmda/generator/resources/"
-                + "foxml-upgrade-cmda.xslt";
+        final String xsltBase =  "fedora/utilities/cmda/generator/resources/";
         InputStream in = Generator.class.getClassLoader().getResourceAsStream(
-                xsltPath);
+                xsltBase + "foxml-upgrade-cmda.xslt");
         XSLT_TEMPLATE = FileUtil.readTextStream(in);
+        in = Generator.class.getClassLoader().getResourceAsStream(
+                xsltBase + "foxml-upgrade-nocmodel.xslt");
+        XSLT_NOCMODEL = FileUtil.readTextStream(in);
     }
     
     /**
@@ -123,16 +128,29 @@ public class Generator {
                 count++;
             }
         }
+        writeNoCModelStylesheet("nocmodel");
+        writeNoCModelStylesheet("bmechs");
+        writeNoCModelStylesheet("bdefs");
         LOG.info("Generated stylesheets and bMechs for " + count
-                + " content models.");
+                + " data object content models.");
     }
     
     //---
     // Instance helpers
     //---
     
+    private void writeNoCModelStylesheet(String filePrefix) {
+        File listFile = new File(m_sourceDir, filePrefix + ".txt");
+        if (listFile.exists()) {
+            File xsltFile = new File(m_sourceDir, filePrefix + ".xslt");
+            FileUtil.writeTextFile(XSLT_NOCMODEL, xsltFile);
+            LOG.info("Wrote stylesheet for " + listFile.getName() + ", "
+                    + xsltFile.getName());
+        }
+    }
+    
     private void generateAll(DigitalObject cModel, String key) {
-        LOG.info("Generating stylesheet for objects with content model "
+        LOG.info("Writing stylesheet for objects with content model "
                 + cModel.getPid());
         File xsltFile = new File(m_sourceDir, "cmodel-" + key
                 + ".members.xslt");
