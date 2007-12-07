@@ -30,6 +30,7 @@
     -->
     <xsl:param name="CModelPidURI" select="'info:fedora/changme:CONTENT_MODEL_PID'"/>
 
+    <xsl:param name="CreatedDate" select="'2007-12-07T00:00:00Z'"/>
 
     <!-- 
         Find maximal created date of RELS-EXT, if there is one.
@@ -84,6 +85,11 @@
                 <xsl:otherwise>
                     <foxml:datastream ID="RELS-EXT" STATE="A" CONTROL_GROUP="X" VERSIONABLE="true">
                         <foxml:datastreamVersion ID="RELS-EXT.0" MIMETYPE="text/xml">
+                            <xsl:attribute name="ID">RELS-EXT.0</xsl:attribute>
+                            <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+                            <xsl:attribute name="CREATED">
+                                <xsl:value-of select="$CreatedDate"/>
+                            </xsl:attribute>
                             <foxml:contentDigest TYPE="DISABLED" DIGEST="none"/>
                             <foxml:xmlContent>
                                 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -92,7 +98,7 @@
                                         <xsl:attribute name="rdf:about">
                                             <xsl:value-of select="@PID"/>
                                         </xsl:attribute>
-                                        <xsl:element name="rel:hasContentModel"
+                                        <xsl:element name="rel:hasFormalContentModel"
                                             namespace="info:fedora/fedora-system:def/relations-external#">
                                             <xsl:attribute name="rdf:resource">
                                                 <xsl:value-of select="$CModelPidURI"/>

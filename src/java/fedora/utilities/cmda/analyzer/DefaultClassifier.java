@@ -2,6 +2,7 @@ package fedora.utilities.cmda.analyzer;
 
 import java.io.UnsupportedEncodingException;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -405,6 +406,7 @@ public class DefaultClassifier implements Classifier {
         ds.DSControlGrp = INLINE_DS_CONTROL_GROUP;
         ds.DSMIME = INLINE_DS_MIME_TYPE;
         ds.DSLabel = dsLabel;
+        ds.DSCreateDT = new Date();
         try {
             ds.xmlContent = xml.getBytes(CHAR_ENCODING);
             obj.datastreams(dsID).add(ds);

@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -176,6 +177,7 @@ class BMechGenerator {
         ds.DSControlGrp = "X";
         ds.DSMIME = "text/xml";
         ds.DSLabel = "Relationships";
+        ds.DSCreateDT = new Date();
         try {
             ds.xmlContent = getRelsExtDSContent(obj.getPid(), bDefPID,
                     cModelPID)
