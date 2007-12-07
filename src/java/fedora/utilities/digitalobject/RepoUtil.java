@@ -151,10 +151,10 @@ public abstract class RepoUtil {
         File objectStoreBase, DODeserializer deserializer) {
         int count = countObjectPaths(conn);
         if (count == 0) {
-            LOG.info("objectPaths table is empty");
+            LOG.info("objectPaths table is empty; will rebuild");
             buildObjectPaths(conn, objectStoreBase, deserializer);
         } else {
-            LOG.info("objectPaths table has " + count + " rows");
+            LOG.debug("objectPaths table has " + count + " rows");
         }
     }
 

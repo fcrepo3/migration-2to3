@@ -1,16 +1,12 @@
 package fedora.utilities.cmda.generator;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +17,7 @@ import org.apache.log4j.Logger;
 import fedora.common.FaultException;
 
 import fedora.server.storage.translation.DODeserializer;
+import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
@@ -51,6 +48,9 @@ public class Generator {
     /** The deserializer to use when reading cModels from sourceDir. */
     private final DODeserializer m_cModelDeserializer;
     
+    /** The serializer to use when writing bMechs to sourceDir. */
+    private final DOSerializer m_serializer;
+    
     static {
         // read the xslt template from the jar into XSLT_TEMPLATE
         final String xsltPath =  "fedora/utilities/cmda/generator/resources/"
@@ -67,12 +67,14 @@ public class Generator {
      * @param sourceDir where to find the input files, and to send output files.
      * @param cModelDeserializer the deserializer to use when reading cModels
      *        from sourceDir.
+     * @param serializer the serializer to use when writing bMechs to sourceDir.
      */
     public Generator(ObjectStore store, File sourceDir,
-            DODeserializer cModelDeserializer) {
+            DODeserializer cModelDeserializer, DOSerializer serializer) {
         m_store = store;
         m_sourceDir = sourceDir;
         m_cModelDeserializer = cModelDeserializer;
+        m_serializer = serializer;
     }
     
     /**
@@ -87,6 +89,9 @@ public class Generator {
      *   cModelDeserializer   - the deserializer to use when reading cModels
      *                          from sourceDir.  Default value is
      *               "fedora.server.storage.translation.FOXML1_1DODeserializer"
+     *   serializer           - the serializer to use when writing bMechs
+     *                          to sourceDir.  Default value is
+     *                 "fedora.server.storage.translation.FOXML1_1DOSerializer"
      * </pre>
      *
      * @param props the properties to get configuration values from.
@@ -99,20 +104,27 @@ public class Generator {
         m_cModelDeserializer = (DODeserializer) ConfigUtil.construct(props,
                 "cModelDeserializer",
                 "fedora.server.storage.translation.FOXML1_1DODeserializer");
+        m_serializer = (DOSerializer) ConfigUtil.construct(props,
+                "serializer",
+                "fedora.server.storage.translation.FOXML1_1DOSerializer");
     }
    
     /**
      * Generates all necessary stylesheets and BMechs.
      */
     public void generateAll() {
+        int count = 0;
         for (File file : m_sourceDir.listFiles()) {
             String[] parts = file.getName().split("\\.");
             if (parts.length == 2 && parts[0].startsWith("cmodel-")) {
                 String key = parts[0].substring(7);
                 generateAll(RepoUtil.readObject(m_cModelDeserializer, file),
                         key);
+                count++;
             }
         }
+        LOG.info("Generated stylesheets and bMechs for " + count
+                + " content models.");
     }
     
     //---
@@ -120,36 +132,28 @@ public class Generator {
     //---
     
     private void generateAll(DigitalObject cModel, String key) {
+        LOG.info("Generating stylesheet for objects with content model "
+                + cModel.getPid());
         File xsltFile = new File(m_sourceDir, "cmodel-" + key
                 + ".members.xslt");
-        generateStylesheet(xsltFile, cModel.getPid());
+        String xslt = XSLT_TEMPLATE.replaceAll(
+                "info:fedora/changme:CONTENT_MODEL_PID",
+                "info:fedora/" + cModel.getPid());
+        FileUtil.writeTextFile(xslt, xsltFile);
         File bMechsFile = new File(m_sourceDir, "cmodel-" + key
                 + ".bmechs.txt");
         if (bMechsFile.exists()) {
-            generateBMechs(bMechsFile, key);
+            LOG.info("Generating bMech object(s) for content model "
+                    + cModel.getPid());
+            generateBMechs(bMechsFile, key, cModel.getPid());
         }
     }
     
-    private void generateStylesheet(File xsltFile, String cModelPID) {
-        String xslt = XSLT_TEMPLATE.replaceAll(
-                "info:fedora/changme:CONTENT_MODEL_PID",
-                "info:fedora/" + cModelPID);
-        try {
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-                    new FileOutputStream(xsltFile), "UTF-8"));
-            writer.print(xslt);
-            writer.close();
-        } catch (IOException e) {
-            throw new FaultException("Error writing stylesheet: "
-                    + xsltFile.getPath(), e);
-        }
-    }
-    
-    private void generateBMechs(File bMechsFile, String key) {
+    private void generateBMechs(File bMechsFile, String key, String cModelPID) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     new FileInputStream(bMechsFile), "UTF-8"));
-            generateBMechs(reader, key);
+            generateBMechs(reader, key, cModelPID);
             reader.close();
         } catch (IOException e) {
             throw new FaultException("Error generating BMech(s) from "
@@ -157,26 +161,27 @@ public class Generator {
         }
     }
     
-    private void generateBMechs(BufferedReader reader, String key)
+    private void generateBMechs(BufferedReader reader, String key,
+            String cModelPID)
             throws IOException {
         String line = reader.readLine();
-        String oldBMech = null;
-        String newBMech = null;
+        String oldPID = null;
+        String newPID = null;
         int i = 0;
         while (line != null) {
             line = line.trim();
             if (line.length() > 0 && !line.startsWith("#")) {
                 String[] parts = line.split(" ");
                 if (parts[0].equals("OLD_BMECH")) {
-                    oldBMech = parts[1];
+                    oldPID = parts[1];
                 } else if (parts[0].equals("NEW_BMECH")) {
-                    newBMech = parts[1];
+                    newPID = parts[1];
                 } else if (parts[0].equals("NEW_PARTS")) {
                     i++;
                     File outFile = new File(m_sourceDir, "cmodel-" + key
                             + ".bmech" + i + ".xml");
-                    generateBMech(oldBMech, newBMech,
-                            parseNewParts(parts), outFile);
+                    generateBMech(oldPID, newPID,
+                            parseNewParts(parts), outFile, cModelPID);
                 }
             }
             line = reader.readLine();
@@ -193,21 +198,16 @@ public class Generator {
     }
    
     private void generateBMech(String oldPID, String newPID, 
-            Map<String, String> newParts, File outFile) 
-            throws IOException {
-        // FIXME: This is just a test; it's not functionally correct.
-        //        What should happen is this:
-        //        - deserialize the object, change the pid,
-        //        - read, change, and write the necessary datastream XML,
-        //        - then serialize to the file using m_serializer.
-        String src = FileUtil.readTextStream(m_store.getObjectStream(oldPID));
-        String dst = src.replaceAll(oldPID, newPID);
-        for (String oldPart : newParts.keySet()) {
-            String newPart = newParts.get(oldPart);
-            dst = dst.replaceAll(oldPart, newPart);
+            Map<String, String> newParts, File outFile, String cModelPID) {
+        LOG.info("Generating bMech " + newPID + " from original, " + oldPID);
+        DigitalObject oldBMech = m_store.getObject(oldPID);
+        if (oldBMech == null) {
+            throw new FaultException("BMech not found in repository: "
+                    + oldPID);
         }
-        FileUtil.writeFile(new ByteArrayInputStream(dst.getBytes("UTF-8")),
-                outFile);
+        BMechGenerator bMechGen = new BMechGenerator(oldBMech);
+        DigitalObject newBMech = bMechGen.generate(newPID, newParts, cModelPID);
+        RepoUtil.writeObject(m_serializer, newBMech, outFile); 
     }
     
     //---
@@ -215,7 +215,7 @@ public class Generator {
     //---
     
     /**
-     * Command-line entry point for the analyzer.
+     * Command-line entry point for the generator.
      * 
      * @param args command-line arguments.
      */

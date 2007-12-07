@@ -187,12 +187,6 @@ public class Transformer {
         } finally {
             FileUtil.close(pids);
         }
-        // TODO: implement, throwing FaultException(msg, e) in event of failure
-        // NOTE:
-        // - When reading pidlist files, blank lines and those beginning
-        //   with # should be ignored.
-        // - If dryrun, don't send output to store.replaceObject;
-        //   just make sure the transformation succeeds
     }
 
     /**
