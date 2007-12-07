@@ -106,14 +106,14 @@ public class Transformer {
             int batchCount = transformBatch(xsltFile, pidFile, store, dryRun);
             LOG.info("Finished transforming batch of " + batchCount
                     + " objects");
-            if (dryRun) {
-                LOG.info("NOTE: This was a dry run (no changes were made).");
-            } else {
-                LOG.info("NOTE: This was NOT a dry run (changes were made).");
-            }
             total += batchCount;
         }
         LOG.info("Finished transforming all " + total + " objects.");
+        if (dryRun) {
+            LOG.info("NOTE: This was a dry run (no changes written).");
+        } else {
+            LOG.info("NOTE: This was NOT a dry run (all changes written).");
+        }
     }
 
     //---
