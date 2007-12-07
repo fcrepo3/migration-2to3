@@ -106,6 +106,11 @@ public class Transformer {
             int batchCount = transformBatch(xsltFile, pidFile, store, dryRun);
             LOG.info("Finished transforming batch of " + batchCount
                     + " objects");
+            if (dryRun) {
+                LOG.info("NOTE: This was a dry run (no changes were made).");
+            } else {
+                LOG.info("NOTE: This was NOT a dry run (changes were made).");
+            }
             total += batchCount;
         }
         LOG.info("Finished transforming all " + total + " objects.");
@@ -282,6 +287,7 @@ public class Transformer {
     }
     
     private static void transformAllFromProperties(Properties props) {
+        inferPathsFromSourceDir(props);
         try {
             Transformer transformer = new Transformer(props);
             ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
@@ -298,6 +304,42 @@ public class Transformer {
             // CHECKSTYLE:ON
             LOG.error("Transformation failed due to an unexpected error", th);
             exitFatally();
+        }
+    }
+    
+    private static void inferPathsFromSourceDir(Properties props) {
+        String sourceDirString = props.getProperty("sourceDir");
+        if (sourceDirString != null && sourceDirString.trim().length() > 0) {
+            String pidFiles = "";
+            String xsltFiles = "";
+            File sourceDir = new File(sourceDirString.trim());
+            for (File file : sourceDir.listFiles()) {
+                if (file.getName().endsWith(".xslt")
+                        || file.getName().endsWith(".xsl")) {
+                    String path = file.getPath();
+                    int i = path.lastIndexOf(".");
+                    String pathPrefix = path.substring(0, i);
+                    File pidFile = new File(pathPrefix + ".txt");
+                    if (!pidFile.exists()) {
+                        pidFile = new File(pathPrefix + ".list");
+                    }
+                    if (!pidFile.exists()) {
+                        pidFile = new File(pathPrefix);
+                    }
+                    if (pidFile.exists()) {
+                        if (xsltFiles.length() > 0) {
+                            xsltFiles += " ";
+                        }
+                        xsltFiles += path;
+                        if (pidFiles.length() > 0) {
+                            pidFiles += " ";
+                        }
+                        pidFiles += pidFile.getPath();
+                    }
+                }
+            }
+            props.setProperty("xsltFiles", xsltFiles);
+            props.setProperty("pidFiles", pidFiles);
         }
     }
 
