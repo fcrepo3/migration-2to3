@@ -30,6 +30,12 @@ class LocalRepoObjectIterator
     /** The query to get all token, path pairs. */
     private static final String QUERY = "SELECT token, path FROM objectPaths";
     
+    /** The default fetch size to use when running the query. */
+    private static final int DEFAULT_FETCH_SIZE = 1000;
+    
+    /** The fetch size to use when running the query, if MySQL is being used. */
+    private static final int MYSQL_FETCH_SIZE = Integer.MIN_VALUE;
+    
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(
             LocalRepoObjectIterator.class);
@@ -113,8 +119,15 @@ class LocalRepoObjectIterator
 
     private ResultSet executeQuery() {
         try {
+            m_conn.setAutoCommit(false);
             Statement st = m_conn.createStatement();
-            LOG.debug("Executing query: " + QUERY);
+            int fetchSize = DEFAULT_FETCH_SIZE;
+            if (RepoUtil.isMySQL(m_conn)) {
+                fetchSize = MYSQL_FETCH_SIZE;
+            }
+            st.setFetchSize(fetchSize);
+            LOG.info("Executing query (fetchSize=" + fetchSize + "): "
+                    + QUERY);
             return st.executeQuery(QUERY);
         } catch (SQLException e) {
             RepoUtil.close(m_conn);

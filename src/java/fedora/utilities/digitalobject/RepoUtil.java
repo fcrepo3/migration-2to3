@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -235,7 +236,7 @@ public abstract class RepoUtil {
 
     /**
      * Closes the connection if it's not null and not already closed.
-     * 
+     *
      * @param conn the connection.
      */
     public static void close(Connection conn) {
@@ -274,6 +275,22 @@ public abstract class RepoUtil {
             }
         } catch (SQLException e) {
             LOG.warn("Error closing result set", e);
+        }
+    }
+   
+    /**
+     * Determines whether the database is MySQL.
+     * 
+     * @param conn the connection to get database metadata from.
+     * @return whether the database is MySQL.
+     */
+    public static boolean isMySQL(Connection conn) {
+        try {
+            DatabaseMetaData md = conn.getMetaData();
+            String name = md.getDatabaseProductName();
+            return name.toUpperCase().indexOf("MYSQL") != -1;
+        } catch (SQLException e) {
+            throw new FaultException("Error getting database metadata", e);
         }
     }
 
