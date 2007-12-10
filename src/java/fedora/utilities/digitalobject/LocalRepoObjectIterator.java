@@ -120,7 +120,8 @@ class LocalRepoObjectIterator
     private ResultSet executeQuery() {
         try {
             m_conn.setAutoCommit(false);
-            Statement st = m_conn.createStatement();
+            Statement st = m_conn.createStatement(
+                    ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             int fetchSize = DEFAULT_FETCH_SIZE;
             if (RepoUtil.isMySQL(m_conn)) {
                 fetchSize = MYSQL_FETCH_SIZE;
