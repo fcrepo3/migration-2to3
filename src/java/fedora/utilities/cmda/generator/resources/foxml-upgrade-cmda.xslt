@@ -146,7 +146,7 @@
                         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
                         <xsl:copy>
                             <xsl:apply-templates select="@*"/>
-                            <xsl:element name="rel:hasContentModel"
+                            <xsl:element name="rel:hasFormalContentModel"
                                 xmlns:rel="info:fedora/fedora-system:def/relations-external#">
                                 <xsl:attribute name="rdf:resource">
                                     <xsl:value-of select="$CModelPidURI"/>
