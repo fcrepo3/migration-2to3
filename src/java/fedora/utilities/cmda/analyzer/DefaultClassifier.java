@@ -127,7 +127,7 @@ public class DefaultClassifier implements Classifier {
      * <p><b>Specifying the PIDGenerator</b>
      * <br/>
      * By default, a built-in PID generator will be used that generates
-     * PIDs of the form: <code>demo:GeneratedPID#</code>, where #
+     * PIDs of the form: <code>changeme:CModel#</code>, where #
      * is incremented for each new PID.  If a property is found named
      * <code>pidGen</code>, the value specifies the PIDGenerator
      * class to use, and the class must have a constructor that accepts
@@ -137,6 +137,9 @@ public class DefaultClassifier implements Classifier {
      */
     public DefaultClassifier(Properties props) {
         setAspects(getIgnoreAspects(props));
+        if (props.get("pidPrefix") == null) {
+            props.put("pidPrefix", "changeme:CModel");
+        }
         m_pidGen = (PIDGenerator) ConfigUtil.construct(props, "pidGen",
                 DEFAULT_PID_GENERATOR);
         m_contentModels = new HashMap<Signature, DigitalObject>();
@@ -158,22 +161,25 @@ public class DefaultClassifier implements Classifier {
      * {@inheritDoc}
      */
     public String getBMechDirectives(String cModelPID) {
-        return getBMechDirectives(m_memberSignatures.get(cModelPID));
+        return getBMechDirectives(m_memberSignatures.get(cModelPID), cModelPID);
     }
 
     //---
     // Instance helpers
     //---
     
-    private String getBMechDirectives(Signature memberSignature) {
+    private String getBMechDirectives(Signature memberSignature,
+            String cModelPID) {
         Set<String> bMechPIDs = memberSignature.getBMechPIDs();
         if (bMechPIDs == null || bMechPIDs.size() == 0) {
             return null;
         }
         StringBuffer out = new StringBuffer();
+        int i = 0;
         for (String origPID : bMechPIDs) {
             out.append("OLD_BMECH " + origPID + CR);
-            out.append("NEW_BMECH " + m_pidGen.getNextPID().toString() + CR);
+            i++;
+            out.append("NEW_BMECH " + cModelPID + "-BMech" + i + CR);
             out.append("NEW_PARTS");
             Set<String> assignments = 
                 memberSignature.getBindingKeyAssignments(origPID);
