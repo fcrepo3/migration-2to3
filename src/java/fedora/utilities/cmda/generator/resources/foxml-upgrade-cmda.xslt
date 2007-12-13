@@ -11,7 +11,8 @@
         
     Output: Valid foxml 1.1 file, with the following changes:
         - VERSION attribute added, set to 1.1
-        - Schema location points to foxml 1.1
+        - No schema location
+        - Old content model property removed
         - Disseminators are removed 
             - (they are expected to be defined in the related CModel object)
         - CModel relationship added to latest RELS-EXT version
@@ -55,15 +56,9 @@
 
     <!-- Get rid of all disseminators -->
     <xsl:template match="foxml:disseminator"/>
-
-    <!-- If a schemaLocation is defined, replace with 1.1 -->
-    <xsl:template match="/@xsi:schemaLocation">
-        <xsl:attribute name="xsi:schemaLocation">
-            <xsl:value-of
-                select="'info:fedora/fedora-system:def/foxml# http://www.fedora.info/definitions/1/0/foxml1-1.xsd'"
-            />
-        </xsl:attribute>
-    </xsl:template>
+    
+    <!-- Get rid of old content model property -->
+    <xsl:template match="foxml:property[@NAME='info:fedora/fedora-system:def/model#contentModel']"/>
 
     <!-- Add missing/required items from the object -->
     <xsl:template match="/foxml:digitalObject">
@@ -71,9 +66,14 @@
 
             <!-- Append the required VERSION attribute -->
             <xsl:attribute name="VERSION">1.1</xsl:attribute>
-
-            <!-- Pass anything else down the chain -->
-            <xsl:apply-templates select="@*|node()"/>
+           
+            <!-- Append the original PID --> 
+            <xsl:attribute name="PID">
+              <xsl:value-of select="@PID"/>
+            </xsl:attribute>
+            
+            <!-- Pass element children down the chain -->
+            <xsl:apply-templates select="node()"/>
 
             <!-- Lastly,  RELS-EXT if it doesn't exist -->
             <xsl:choose>
@@ -93,13 +93,13 @@
                             <foxml:contentDigest TYPE="DISABLED" DIGEST="none"/>
                             <foxml:xmlContent>
                                 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                                    xmlns:rel="info:fedora/fedora-system:def/relations-external#">
+                                    xmlns:fedora-model="info:fedora/fedora-system:def/model#">
                                     <rdf:Description>
                                         <xsl:attribute name="rdf:about">
                                             <xsl:value-of select="@PID"/>
                                         </xsl:attribute>
-                                        <xsl:element name="rel:hasFormalContentModel"
-                                            namespace="info:fedora/fedora-system:def/relations-external#">
+                                        <xsl:element name="fedora-model:hasFormalContentModel"
+                                            namespace="info:fedora/fedora-system:def/model#">
                                             <xsl:attribute name="rdf:resource">
                                                 <xsl:value-of select="$CModelPidURI"/>
                                             </xsl:attribute>
@@ -146,8 +146,8 @@
                         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
                         <xsl:copy>
                             <xsl:apply-templates select="@*"/>
-                            <xsl:element name="rel:hasFormalContentModel"
-                                xmlns:rel="info:fedora/fedora-system:def/relations-external#">
+                            <xsl:element name="fedora-model:hasContentModel"
+                                xmlns:fedora-model="info:fedora/fedora-system:def/model#">
                                 <xsl:attribute name="rdf:resource">
                                     <xsl:value-of select="$CModelPidURI"/>
                                 </xsl:attribute>

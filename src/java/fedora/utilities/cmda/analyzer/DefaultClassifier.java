@@ -50,10 +50,6 @@ public class DefaultClassifier implements Classifier {
     /** Line separator for this platform. */
     private static final String CR = System.getProperty("line.separator");
     
-    /** TODO: Use the constant in fedora.common.Constants. */
-    private static final String DS_COMPOSITE_MODEL_NS
-            = "info:fedora/fedora-system:def/cmodel#";
-
     /** Control group to use for Inline XML datastreams. */
     private static final String INLINE_DS_CONTROL_GROUP = "X";
 
@@ -429,13 +425,14 @@ public class DefaultClassifier implements Classifier {
             String pid) {
         StringBuffer out = new StringBuffer();
         out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri 
-                + "\" xmlns:rel=\"" + Constants.RELS_EXT.uri + "\">" + CR);
+                + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri + "\">"
+                + CR);
         out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid
                 + "\">" + CR);
         if (signature.getBDefPIDs() != null) {
             for (String bDefPID : signature.getBDefPIDs()) {
-                out.append("    <rel:" + Constants.RELS_EXT
-                        .HAS_BDEF.localName
+                out.append("    <fedora-model:"
+                        + Constants.MODEL.HAS_BDEF.localName
                         + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>"
                         + CR);
             }
@@ -447,8 +444,8 @@ public class DefaultClassifier implements Classifier {
 
     private static String getCompModelDSContent(Signature signature) {
         StringBuffer out = new StringBuffer();
-        out.append("<dsCompositeModel xmlns=\"" + DS_COMPOSITE_MODEL_NS 
-                + "\">" + CR);
+        out.append("<dsCompositeModel xmlns=\""
+                + Constants.DS_COMPOSITE_MODEL.uri + "\">" + CR);
         if (signature.getDatastreamIDs() != null) {
             for (String dsID : signature.getDatastreamIDs()) {
                 out.append("  <dsTypeModel ID=\"" + dsID + "\">" + CR);

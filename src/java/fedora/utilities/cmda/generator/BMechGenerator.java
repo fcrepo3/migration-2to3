@@ -229,12 +229,14 @@ class BMechGenerator {
             String cModelPID) {
         StringBuffer out = new StringBuffer();
         out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri 
-                + "\" xmlns:rel=\"" + Constants.RELS_EXT.uri + "\">" + CR);
+                + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri + "\">"
+                + CR);
         out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid
                 + "\">" + CR);
-        out.append("    <rel:" + Constants.RELS_EXT.HAS_BDEF.localName
+        out.append("    <fedora-model:" + Constants.MODEL.HAS_BDEF.localName
                 + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>" + CR);
-        out.append("    <rel:" + Constants.RELS_EXT.IS_CONTRACTOR.localName
+        out.append("    <fedora-model:"
+                + Constants.MODEL.IS_CONTRACTOR.localName
                 + " rdf:resource=\"info:fedora/" + cModelPID + "\"/>" + CR);
         out.append("  </rdf:Description>");
         out.append("</rdf:RDF>");
