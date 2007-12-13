@@ -98,7 +98,7 @@
                                         <xsl:attribute name="rdf:about">
                                             <xsl:value-of select="@PID"/>
                                         </xsl:attribute>
-                                        <xsl:element name="fedora-model:hasFormalContentModel"
+                                        <xsl:element name="fedora-model:hasContentModel"
                                             namespace="info:fedora/fedora-system:def/model#">
                                             <xsl:attribute name="rdf:resource">
                                                 <xsl:value-of select="$CModelPidURI"/>
