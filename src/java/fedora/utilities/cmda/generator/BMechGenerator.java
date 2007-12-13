@@ -110,6 +110,8 @@ class BMechGenerator {
     public DigitalObject generate(String newPID, Map<String, String> newParts,
             String cModelPID) {
         DigitalObject obj = new BasicDigitalObject();
+        obj.setLabel("Generated BMech for " + cModelPID + " (copy of "
+                + m_oldBMech.getPid() + ")");
         obj.addFedoraObjectType(DigitalObject.FEDORA_BMECH_OBJECT);
         obj.setPid(newPID);
         addFixedCopy(obj, "DSINPUTSPEC", newParts);
@@ -172,6 +174,7 @@ class BMechGenerator {
     private void addRelsExt(DigitalObject obj, String bDefPID,
             String cModelPID) {
         DatastreamXMLMetadata ds = new DatastreamXMLMetadata("UTF-8");
+        ds.DSVersionable = true;
         ds.DatastreamID = "RELS-EXT";
         ds.DSVersionID = "RELS-EXT" + "1.0";
         ds.DSControlGrp = "X";

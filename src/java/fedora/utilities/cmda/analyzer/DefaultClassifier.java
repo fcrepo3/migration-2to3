@@ -211,6 +211,7 @@ public class DefaultClassifier implements Classifier {
             return m_contentModels.get(signature);
         }
         DigitalObject cModelObj = new BasicDigitalObject();
+        cModelObj.setLabel("Generated CModel");
         cModelObj.addFedoraObjectType(DigitalObject
                 .FEDORA_CONTENT_MODEL_OBJECT);
         cModelObj.setPid(m_pidGen.getNextPID().toString());
@@ -407,6 +408,7 @@ public class DefaultClassifier implements Classifier {
     private static void addInlineDS(DigitalObject obj, String dsID,
             String dsLabel, String xml) {
         DatastreamXMLMetadata ds = new DatastreamXMLMetadata(CHAR_ENCODING);
+        ds.DSVersionable = true;
         ds.DatastreamID = dsID;
         ds.DSVersionID = dsID + DS_VERSION_ID_SUFFIX;
         ds.DSControlGrp = INLINE_DS_CONTROL_GROUP;

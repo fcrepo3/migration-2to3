@@ -22,7 +22,6 @@
 -->
 
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:foxml="info:fedora/fedora-system:def/foxml#">
 
     <!-- 
@@ -90,6 +89,7 @@
                             <xsl:attribute name="CREATED">
                                 <xsl:value-of select="$CreatedDate"/>
                             </xsl:attribute>
+                            <xsl:attribute name="LABEL">Relationships</xsl:attribute>
                             <foxml:contentDigest TYPE="DISABLED" DIGEST="none"/>
                             <foxml:xmlContent>
                                 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -119,7 +119,7 @@
         match="/foxml:digitalObject/foxml:datastream[@ID='RELS-EXT']/foxml:datastreamVersion">
         <xsl:choose>
 
-            <!-- Only add therelationship to the latest RELS-EXT -->
+            <!-- Only add the relationship to the latest RELS-EXT -->
             <xsl:when test="@CREATED = $maxCreatedDate">
                 <xsl:call-template name="addCmodelRel"/>
             </xsl:when>
