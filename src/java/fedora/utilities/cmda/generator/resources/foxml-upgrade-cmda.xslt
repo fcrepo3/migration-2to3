@@ -96,6 +96,7 @@
                                     xmlns:fedora-model="info:fedora/fedora-system:def/model#">
                                     <rdf:Description>
                                         <xsl:attribute name="rdf:about">
+                                            <xsl:text>info:fedora/</xsl:text>
                                             <xsl:value-of select="@PID"/>
                                         </xsl:attribute>
                                         <xsl:element name="fedora-model:hasContentModel"
