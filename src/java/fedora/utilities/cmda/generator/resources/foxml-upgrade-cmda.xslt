@@ -83,9 +83,9 @@
                 <!-- Otherwise, add a RELS-EXT -->
                 <xsl:otherwise>
                     <foxml:datastream ID="RELS-EXT" STATE="A" CONTROL_GROUP="X" VERSIONABLE="true">
-                        <foxml:datastreamVersion ID="RELS-EXT.0" MIMETYPE="text/xml">
+                        <foxml:datastreamVersion ID="RELS-EXT.0" MIMETYPE="application/rdf+xml">
                             <xsl:attribute name="ID">RELS-EXT.0</xsl:attribute>
-                            <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+                            <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
                             <xsl:attribute name="CREATED">
                                 <xsl:value-of select="$CreatedDate"/>
                             </xsl:attribute>
@@ -113,6 +113,11 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:copy>
+    </xsl:template>
+
+    <!-- Update RELS-EXT MIME-type to application/rdf+xml -->
+    <xsl:template match="//foxml:datastream[@ID='RELS-EXT']/foxml:datastreamVersion/@MIMETYPE">
+        <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
     </xsl:template>
 
     <!-- Add the CMDA contract relationship to current RELS-EXT, if it exists -->
