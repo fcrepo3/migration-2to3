@@ -70,6 +70,12 @@ public class DefaultClassifier implements Classifier {
 
     /** Label for RELS-EXT datastreams. */
     private static final String RELS_EXT_DS_LABEL = "Relationships";
+    
+    /** Datastream ID for RELS-INT datastreams. */
+    private static final String RELS_INT_DS_ID = "RELS-INT";
+    
+    /** MIME type for RELS datastreams. */
+    private static final String RELS_MIME_TYPE = "application/rdf+xml";
 
     /** Aspects used by this instance for the purpose of classification. */
     private Set<Aspect> m_aspects;
@@ -339,8 +345,14 @@ public class DefaultClassifier implements Classifier {
             Set<String> dsIDs) {
         Map<String, String> map = new HashMap<String, String>();
         for (String dsID : dsIDs) {
-            Datastream ds = getLatestDSVersion(obj, dsID);
-            map.put(dsID, ds.DSMIME);
+            String dsMIME;
+            if(dsID.equals(RELS_EXT_DS_ID) || dsID.equals(RELS_INT_DS_ID)) {
+                dsMIME = RELS_MIME_TYPE;
+            } else {
+                Datastream ds = getLatestDSVersion(obj, dsID);
+                dsMIME = ds.DSMIME;
+            }
+            map.put(dsID, dsMIME);
         }
         return map;
     }
@@ -412,9 +424,15 @@ public class DefaultClassifier implements Classifier {
         ds.DatastreamID = dsID;
         ds.DSVersionID = dsID + DS_VERSION_ID_SUFFIX;
         ds.DSControlGrp = INLINE_DS_CONTROL_GROUP;
-        ds.DSMIME = INLINE_DS_MIME_TYPE;
         ds.DSLabel = dsLabel;
         ds.DSCreateDT = new Date();
+        
+        if(dsID.equals(RELS_EXT_DS_ID) || dsID.equals(RELS_INT_DS_ID)) {
+            ds.DSMIME = RELS_MIME_TYPE;
+        } else {
+            ds.DSMIME = INLINE_DS_MIME_TYPE;
+        }
+        
         try {
             ds.xmlContent = xml.getBytes(CHAR_ENCODING);
             obj.datastreams(dsID).add(ds);

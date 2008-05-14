@@ -119,6 +119,11 @@
     <xsl:template match="//foxml:datastream[@ID='RELS-EXT']/foxml:datastreamVersion/@MIMETYPE">
         <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
     </xsl:template>
+    
+    <!-- Update RELS-INT MIME-type to application/rdf+xml -->
+    <xsl:template match="//foxml:datastream[@ID='RELS-INT']/foxml:datastreamVersion/@MIMETYPE">
+        <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
+    </xsl:template>
 
     <!-- Add the CMDA contract relationship to current RELS-EXT, if it exists -->
     <xsl:template

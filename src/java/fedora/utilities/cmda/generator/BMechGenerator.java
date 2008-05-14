@@ -178,7 +178,7 @@ class BMechGenerator {
         ds.DatastreamID = "RELS-EXT";
         ds.DSVersionID = "RELS-EXT" + "1.0";
         ds.DSControlGrp = "X";
-        ds.DSMIME = "text/xml";
+        ds.DSMIME = "application/rdf+xml";
         ds.DSLabel = "Relationships";
         ds.DSCreateDT = new Date();
         try {
