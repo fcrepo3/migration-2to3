@@ -117,7 +117,7 @@ public abstract class RepoUtil {
             }
             if (error != null) {
                 throw new FaultException("Error serializing to "
-                        + file.getPath());
+                        + file.getPath(), error);
             }
         }
     }

@@ -44,20 +44,29 @@ public class Transformer {
     /** Corresponding XSLT files this instance will use. */
     private final List<File> m_xsltFiles;
 
+    private static final String EXPLICIT_BASIC_MODEL = "explicitBasicModel";
+
+    private final boolean m_explicitBasicModel;
+
     /**
      * Creates an instance.
      * 
-     * @param pidFiles pid files identifying objects to transform for each
-     *        associated stylesheet.
-     * @param xsltFiles xslt files containing transformation rules for each
-     *        associated pid file.
-     * @throws IllegalArgumentException if pidFiles or xsltFiles are empty, a
-     *         file listed doesn't exist, or the number of pidFiles and
-     *         xsltFiles don't match.
+     * @param pidFiles
+     *        pid files identifying objects to transform for each associated
+     *        stylesheet.
+     * @param xsltFiles
+     *        xslt files containing transformation rules for each associated pid
+     *        file.
+     * @throws IllegalArgumentException
+     *         if pidFiles or xsltFiles are empty, a file listed doesn't exist,
+     *         or the number of pidFiles and xsltFiles don't match.
      */
-    public Transformer(List<File> pidFiles, List<File> xsltFiles) {
+    public Transformer(List<File> pidFiles,
+                       List<File> xsltFiles,
+                       boolean explicitBasicModel) {
         m_pidFiles = pidFiles;
         m_xsltFiles = xsltFiles;
+        m_explicitBasicModel = explicitBasicModel;
         validateFiles();
     }
 
@@ -75,23 +84,32 @@ public class Transformer {
      *                          passed.
      * </pre>
      * 
-     * @param props the properties.
-     * @throws IllegalArgumentException if a required parameter is unspecified,
-     *         one of the specified files doesn't exist, or the number of
-     *         pidFiles and xsltFiles don't match.
+     * @param props
+     *        the properties.
+     * @throws IllegalArgumentException
+     *         if a required parameter is unspecified, one of the specified
+     *         files doesn't exist, or the number of pidFiles and xsltFiles
+     *         don't match.
      */
     public Transformer(Properties props) {
         m_pidFiles = ConfigUtil.getRequiredFiles(props, "pidFiles");
         m_xsltFiles = ConfigUtil.getRequiredFiles(props, "xsltFiles");
+        m_explicitBasicModel =
+                ConfigUtil.getOptionalBoolean(props,
+                                              EXPLICIT_BASIC_MODEL,
+                                              false);
         validateFiles();
     }
 
     /**
      * Run all transformations.
      * 
-     * @param store the store to read from/write to.
-     * @param dryRun if false, transformation should not overwrite original.
-     * @throws FaultException if transformation cannot complete for any reason.
+     * @param store
+     *        the store to read from/write to.
+     * @param dryRun
+     *        if false, transformation should not overwrite original.
+     * @throws FaultException
+     *         if transformation cannot complete for any reason.
      */
     public void transformAll(ObjectStore store, boolean dryRun)
             throws FaultException {
@@ -101,9 +119,14 @@ public class Transformer {
         for (int i = 0; i < m_pidFiles.size(); i++) {
             File pidFile = m_pidFiles.get(i);
             File xsltFile = m_xsltFiles.get(i);
-            LOG.info("Transforming objects in " + pidFile.getName()
-                    + " with " + xsltFile.getName());
-            int batchCount = transformBatch(xsltFile, pidFile, store, dryRun);
+            LOG.info("Transforming objects in " + pidFile.getName() + " with "
+                    + xsltFile.getName());
+            int batchCount =
+                    transformBatch(xsltFile,
+                                   pidFile,
+                                   store,
+                                   m_explicitBasicModel,
+                                   dryRun);
             LOG.info("Finished transforming batch of " + batchCount
                     + " objects");
             total += batchCount;
@@ -154,15 +177,23 @@ public class Transformer {
     /**
      * Transform all objects in pidFile with the indicated xsltFile.
      * 
-     * @param xsltFile the stylesheet to use for transforming the batch.
-     * @param pidFile a text file containing a list of pids, one per line.
-     * @param store the store to read from/write to.
-     * @param dryRun if false, transformation should not overwrite original.
+     * @param xsltFile
+     *        the stylesheet to use for transforming the batch.
+     * @param pidFile
+     *        a text file containing a list of pids, one per line.
+     * @param store
+     *        the store to read from/write to.
+     * @param dryRun
+     *        if false, transformation should not overwrite original.
      * @return the number of transformations done.
-     * @throws FaultException if transformation cannot complete for any reason.
+     * @throws FaultException
+     *         if transformation cannot complete for any reason.
      */
-    private static int transformBatch(File xsltFile, File pidFile,
-            ObjectStore store, boolean dryRun) {
+    private static int transformBatch(File xsltFile,
+                                      File pidFile,
+                                      ObjectStore store,
+                                      boolean explicitBasicModel,
+                                      boolean dryRun) {
         BufferedReader pids = null;
         String pidLine = null;
         int numTransformed = 0;
@@ -170,6 +201,10 @@ public class Transformer {
             TransformerFactory tfactory = TransformerFactory.newInstance();
             javax.xml.transform.Transformer vtransformer =
                     tfactory.newTransformer(new StreamSource(xsltFile));
+
+            if (explicitBasicModel) {
+                vtransformer.setParameter(EXPLICIT_BASIC_MODEL, "'true'");
+            }
             pids = new BufferedReader(new FileReader(pidFile));
             while ((pidLine = pids.readLine()) != null) {
                 pidLine = pidLine.trim();
@@ -197,18 +232,22 @@ public class Transformer {
     /**
      * Transform one object with the indicated xsltFile.
      * 
-     * @param xsltTransformer the compiled form of the stylesheet to use for
-     *        transforming the object.
-     * @param pid the pid of the object to transform.
-     * @param store the store to read from/write to.
-     * @param dryRun if false, transformation should not overwrite original.
+     * @param xsltTransformer
+     *        the compiled form of the stylesheet to use for transforming the
+     *        object.
+     * @param pid
+     *        the pid of the object to transform.
+     * @param store
+     *        the store to read from/write to.
+     * @param dryRun
+     *        if false, transformation should not overwrite original.
      * @return the number of transformations done.
      * @throws TransformerException
      */
-    private static int transformOne(
-            javax.xml.transform.Transformer xsltTransformer, String pid,
-            ObjectStore store, boolean dryRun)
-            throws TransformerException {
+    private static int transformOne(javax.xml.transform.Transformer xsltTransformer,
+                                    String pid,
+                                    ObjectStore store,
+                                    boolean dryRun) throws TransformerException {
         InputStream str = store.getObjectStream(pid);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         StreamResult res = new StreamResult(out);
@@ -216,7 +255,7 @@ public class Transformer {
         if (!dryRun) {
             LOG.info("Transformed and replaced " + pid);
             store.replaceObject(pid,
-                    new ByteArrayInputStream(out.toByteArray()));
+                                new ByteArrayInputStream(out.toByteArray()));
         } else {
             LOG.info("Transformed " + pid);
         }
@@ -230,7 +269,8 @@ public class Transformer {
     /**
      * Command-line entry point for the analyzer.
      * 
-     * @param args command-line arguments.
+     * @param args
+     *        command-line arguments.
      */
     public static void main(String[] args) {
         // HACK: make DOTranslatorUtility happy
@@ -244,7 +284,7 @@ public class Transformer {
         }
         transformAllFromProperties(getTransformationProperties(args));
     }
-    
+
     private static Properties getTransformationProperties(String[] args) {
         Properties props = new Properties();
         if (args.length == 0) {
@@ -269,14 +309,13 @@ public class Transformer {
         }
         return props;
     }
-    
+
     private static Properties getPropertiesFromFile(File configFile) {
         Properties props = new Properties();
         try {
             props.load(new FileInputStream(configFile));
         } catch (FileNotFoundException e) {
-            LOG.error("Configuration file not found: "
-                    + configFile.getPath());
+            LOG.error("Configuration file not found: " + configFile.getPath());
             exitFatally();
         } catch (IOException e) {
             LOG.error("Error reading configuration file: "
@@ -285,16 +324,18 @@ public class Transformer {
         }
         return props;
     }
-    
+
     private static void transformAllFromProperties(Properties props) {
         inferPathsFromSourceDir(props);
         try {
             Transformer transformer = new Transformer(props);
-            ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
-                    "objectStore",
-                    "fedora.utilities.digitalobject.LocalRepoObjectStore");
-            boolean dryRun = ConfigUtil.getOptionalBoolean(props, "dryRun",
-                    false);
+            ObjectStore store =
+                    (ObjectStore) ConfigUtil
+                            .construct(props,
+                                       "objectStore",
+                                       "fedora.utilities.digitalobject.LocalRepoObjectStore");
+            boolean dryRun =
+                    ConfigUtil.getOptionalBoolean(props, "dryRun", false);
             transformer.transformAll(store, dryRun);
         } catch (IllegalArgumentException e) {
             LOG.error(e.getMessage());
@@ -306,7 +347,7 @@ public class Transformer {
             exitFatally();
         }
     }
-    
+
     private static void inferPathsFromSourceDir(Properties props) {
         String sourceDirString = props.getProperty("sourceDir");
         if (sourceDirString != null && sourceDirString.trim().length() > 0) {

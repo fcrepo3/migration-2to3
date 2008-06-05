@@ -39,9 +39,6 @@ public class Generator {
     /** Contains the base stylesheet for upgrading + setting new cmodel. */
     private static final String XSLT_TEMPLATE;
    
-    /** Contains the base stylesheet for upgrading (no cmodel). */
-    private static final String XSLT_NOCMODEL;
-   
     /** Where the original BMechs can be read from. */
     private final ObjectStore m_store;
     
@@ -54,15 +51,14 @@ public class Generator {
     /** The serializer to use when writing bMechs to sourceDir. */
     private final DOSerializer m_serializer;
     
+    private final boolean m_explicitBasicModel;
+    
     static {
         // read the xslt template from the jar into XSLT_TEMPLATE
         final String xsltBase =  "fedora/utilities/cmda/generator/resources/";
         InputStream in = Generator.class.getClassLoader().getResourceAsStream(
                 xsltBase + "foxml-upgrade-cmda.xslt");
         XSLT_TEMPLATE = FileUtil.readTextStream(in);
-        in = Generator.class.getClassLoader().getResourceAsStream(
-                xsltBase + "foxml-upgrade-nocmodel.xslt");
-        XSLT_NOCMODEL = FileUtil.readTextStream(in);
     }
     
     /**
@@ -75,11 +71,12 @@ public class Generator {
      * @param serializer the serializer to use when writing bMechs to sourceDir.
      */
     public Generator(ObjectStore store, File sourceDir,
-            DODeserializer cModelDeserializer, DOSerializer serializer) {
+            DODeserializer cModelDeserializer, DOSerializer serializer, boolean explicitBasicModel) {
         m_store = store;
         m_sourceDir = sourceDir;
         m_cModelDeserializer = cModelDeserializer;
         m_serializer = serializer;
+        m_explicitBasicModel = explicitBasicModel;
     }
     
     /**
@@ -112,10 +109,11 @@ public class Generator {
         m_serializer = (DOSerializer) ConfigUtil.construct(props,
                 "serializer",
                 "fedora.server.storage.translation.FOXML1_1DOSerializer");
+        m_explicitBasicModel = ConfigUtil.getOptionalBoolean(props, "explicitBasicModel", false);
     }
    
     /**
-     * Generates all necessary stylesheets and BMechs.
+     * Generates all necessary stylesheets and SDeps.
      */
     public void generateAll() {
         int count = 0;
@@ -129,9 +127,9 @@ public class Generator {
             }
         }
         writeNoCModelStylesheet("nocmodel");
-        writeNoCModelStylesheet("bmechs");
-        writeNoCModelStylesheet("bdefs");
-        LOG.info("Generated stylesheets and bMechs for " + count
+        writeNoCModelStylesheet("sdeps");
+        writeNoCModelStylesheet("sdefs");
+        LOG.info("Generated stylesheets service deployments for " + count
                 + " data object content models.");
     }
     
@@ -143,7 +141,7 @@ public class Generator {
         File listFile = new File(m_sourceDir, filePrefix + ".txt");
         if (listFile.exists()) {
             File xsltFile = new File(m_sourceDir, filePrefix + ".xslt");
-            FileUtil.writeTextFile(XSLT_NOCMODEL, xsltFile);
+            FileUtil.writeTextFile(XSLT_TEMPLATE, xsltFile);
             LOG.info("Wrote stylesheet for " + listFile.getName() + ", "
                     + xsltFile.getName());
         }
@@ -155,13 +153,13 @@ public class Generator {
         File xsltFile = new File(m_sourceDir, "cmodel-" + key
                 + ".members.xslt");
         String xslt = XSLT_TEMPLATE.replaceAll(
-                "info:fedora/changme:CONTENT_MODEL_PID",
-                "info:fedora/" + cModel.getPid());
+                "<xsl:param name=\"cModelPidURI\"",                               
+                "<xsl:param name=\"cModelPidURI\" select=\"'info:fedora/" + cModel.getPid() + "'\"");
         FileUtil.writeTextFile(xslt, xsltFile);
         File bMechsFile = new File(m_sourceDir, "cmodel-" + key
-                + ".bmechs.txt");
+                + ".deployments.txt");
         if (bMechsFile.exists()) {
-            LOG.info("Generating bMech object(s) for content model "
+            LOG.info("Generating service deployment object(s) for content model "
                     + cModel.getPid());
             generateBMechs(bMechsFile, key, cModel.getPid());
         }
@@ -174,7 +172,7 @@ public class Generator {
             generateBMechs(reader, key, cModelPID);
             reader.close();
         } catch (IOException e) {
-            throw new FaultException("Error generating BMech(s) from "
+            throw new FaultException("Error generating service deployment(s) from "
                     + bMechsFile.getPath(), e);
         }
     }
@@ -192,12 +190,12 @@ public class Generator {
                 String[] parts = line.split(" ");
                 if (parts[0].equals("OLD_BMECH")) {
                     oldPID = parts[1];
-                } else if (parts[0].equals("NEW_BMECH")) {
+                } else if (parts[0].equals("NEW_DEPLOYMENTS")) {
                     newPID = parts[1];
                 } else if (parts[0].equals("NEW_PARTS")) {
                     i++;
                     File outFile = new File(m_sourceDir, "cmodel-" + key
-                            + ".bmech" + i + ".xml");
+                            + ".deployment" + i + ".xml");
                     generateBMech(oldPID, newPID,
                             parseNewParts(parts), outFile, cModelPID);
                 }
@@ -217,13 +215,13 @@ public class Generator {
    
     private void generateBMech(String oldPID, String newPID, 
             Map<String, String> newParts, File outFile, String cModelPID) {
-        LOG.info("Generating bMech " + newPID + " from original, " + oldPID);
+        LOG.info("Generating service deployment " + newPID + " from original, " + oldPID);
         DigitalObject oldBMech = m_store.getObject(oldPID);
         if (oldBMech == null) {
             throw new FaultException("BMech not found in repository: "
                     + oldPID);
         }
-        BMechGenerator bMechGen = new BMechGenerator(oldBMech);
+        ServiceDeploymentGenerator bMechGen = new ServiceDeploymentGenerator(oldBMech, m_explicitBasicModel);
         DigitalObject newBMech = bMechGen.generate(newPID, newParts, cModelPID);
         RepoUtil.writeObject(m_serializer, newBMech, outFile); 
     }

@@ -2,6 +2,7 @@
  * detailed in the license directory at the root of the source tree (also 
  * available online at http://www.fedora.info/license/).
  */
+
 package fedora.utilities.cmda.generator;
 
 import java.io.ByteArrayInputStream;
@@ -14,7 +15,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -33,6 +33,7 @@ import org.w3c.dom.Document;
 
 import fedora.common.Constants;
 import fedora.common.FaultException;
+import fedora.common.Models;
 
 import fedora.server.storage.types.BasicDigitalObject;
 import fedora.server.storage.types.Datastream;
@@ -44,47 +45,52 @@ import fedora.server.storage.types.DigitalObject;
  * 
  * @author Chris Wilper
  */
-class BMechGenerator {
-    
+class ServiceDeploymentGenerator {
+
     /** System-dependent line separator. */
     private static final String CR = System.getProperty("line.separator");
-    
+
     /** The source behavior mechanism object. */
     private final DigitalObject m_oldBMech;
-    
+
     /** The bDef pid expressed in the source bMech. */
     private final String m_bDefPID;
-    
+
     /** The latest version of all datastreams in the source bMech. */
     private final Map<String, Datastream> m_oldDatastreams;
-   
+
     /** Stylesheet for fixing bMech datastreams. */
     private final Transformer m_xmlFixer;
-   
+
+    private final boolean m_explicitBasicModel;
+
     /**
      * Creates an instance.
      * 
-     * @param oldBMech the source behavior mechanism object.
+     * @param oldBMech
+     *        the source behavior mechanism object.
      */
     @SuppressWarnings("unchecked")
-    public BMechGenerator(DigitalObject oldBMech) {
+    public ServiceDeploymentGenerator(DigitalObject oldBMech,
+                                      boolean explicitBasicModel) {
         m_oldBMech = oldBMech;
         m_oldDatastreams = new HashMap<String, Datastream>();
-        
+        m_explicitBasicModel = explicitBasicModel;
         // put latest version of all original datastreams in m_oldDatastreams
         Iterator<String> dsIDs = m_oldBMech.datastreamIdIterator();
         while (dsIDs.hasNext()) {
             String dsID = dsIDs.next();
             m_oldDatastreams.put(dsID, getLatestOldDS(dsID));
         }
-        
+
         m_bDefPID = getBDefPID();
-        
+
         // build the transformer we'll use for this instance
-        final String xsltPath =  "fedora/utilities/cmda/generator/resources/"
-                + "fix-bmech-datastream.xslt";
-        InputStream in = Generator.class.getClassLoader().getResourceAsStream(
-                xsltPath);
+        final String xsltPath =
+                "fedora/utilities/cmda/generator/resources/"
+                        + "fix-bmech-datastream.xslt";
+        InputStream in =
+                Generator.class.getClassLoader().getResourceAsStream(xsltPath);
         if (in == null) {
             throw new FaultException("Resource not found: " + xsltPath);
         }
@@ -95,25 +101,29 @@ class BMechGenerator {
             throw new FaultException("Error configuring transformer", e);
         }
     }
-   
+
     /**
-     * Generates a copy of the source bMech with a different PID and
-     * new part names.
+     * Generates a copy of the source bMech with a different PID and new part
+     * names.
      * 
-     * @param newPID the PID to use for the copy.
-     * @param newParts mapping of original datastream input part names to 
-     *                 the names they should have in the copy.
-     * @param cModelPID the pid of the content model the BMech is contractor
-     *                  for (for RELS-EXT).
+     * @param newPID
+     *        the PID to use for the copy.
+     * @param newParts
+     *        mapping of original datastream input part names to the names they
+     *        should have in the copy.
+     * @param cModelPID
+     *        the pid of the content model the BMech is contractor for (for
+     *        RELS-EXT).
      * @return the copy.
      */
-    public DigitalObject generate(String newPID, Map<String, String> newParts,
-            String cModelPID) {
+    public DigitalObject generate(String newPID,
+                                  Map<String, String> newParts,
+                                  String cModelPID) {
         DigitalObject obj = new BasicDigitalObject();
-        obj.setLabel("Generated BMech for " + cModelPID + " (copy of "
+        obj.setLabel("Generated deployment for " + cModelPID + " (copy of "
                 + m_oldBMech.getPid() + ")");
-        obj.addFedoraObjectType(DigitalObject.FEDORA_BMECH_OBJECT);
         obj.setPid(newPID);
+
         addFixedCopy(obj, "DSINPUTSPEC", newParts);
         addFixedCopy(obj, "METHODMAP", newParts);
         addFixedCopy(obj, "WSDL", newParts);
@@ -121,17 +131,16 @@ class BMechGenerator {
         copyOtherDatastreams(obj);
         return obj;
     }
-    
+
     //---
     // Instance helpers
     //---
-    
+
     private String getBDefPID() {
         // the bdef pid is found in DSINPUTSPEC's root element,
         // <fbs:DSInputSpec bDefPID="demo:DualResImage"
         byte[] xmlContent =
-            ((DatastreamXMLMetadata) m_oldDatastreams.get("DSINPUTSPEC"))
-            .xmlContent;
+                ((DatastreamXMLMetadata) m_oldDatastreams.get("DSINPUTSPEC")).xmlContent;
         try {
             DocumentBuilderFactory factory =
                     DocumentBuilderFactory.newInstance();
@@ -148,31 +157,28 @@ class BMechGenerator {
             throw new FaultException("Error reading DSINPUTSPEC", e);
         }
     }
-    
-    @SuppressWarnings("unchecked")
+
     private Datastream getLatestOldDS(String dsID) {
         Datastream latest = null;
-        List<Datastream> versions = m_oldBMech.datastreams(dsID);
-        for (Datastream ds : versions) {
+
+        for (Datastream ds : m_oldBMech.datastreams(dsID)) {
             if (latest == null || ds.DSCreateDT.after(latest.DSCreateDT)) {
                 latest = ds;
             }
         }
         return latest;
     }
-    
-    @SuppressWarnings("unchecked")
-    private void addFixedCopy(DigitalObject obj, String dsID,
-            Map<String, String> newParts) {
+
+    private void addFixedCopy(DigitalObject obj,
+                              String dsID,
+                              Map<String, String> newParts) {
         DatastreamXMLMetadata ds =
-            (DatastreamXMLMetadata) (m_oldDatastreams.get(dsID).copy());
-        obj.datastreams(dsID).add(ds);
+                (DatastreamXMLMetadata) (m_oldDatastreams.get(dsID).copy());
+        obj.addDatastreamVersion(ds, false);
         fixXML(ds, newParts);
     }
-    
-    @SuppressWarnings("unchecked")
-    private void addRelsExt(DigitalObject obj, String bDefPID,
-            String cModelPID) {
+
+    private void addRelsExt(DigitalObject obj, String bDefPID, String cModelPID) {
         DatastreamXMLMetadata ds = new DatastreamXMLMetadata("UTF-8");
         ds.DSVersionable = true;
         ds.DatastreamID = "RELS-EXT";
@@ -182,27 +188,28 @@ class BMechGenerator {
         ds.DSLabel = "Relationships";
         ds.DSCreateDT = new Date();
         try {
-            ds.xmlContent = getRelsExtDSContent(obj.getPid(), bDefPID,
-                    cModelPID)
-                    .getBytes("UTF-8");
-            obj.datastreams("RELS-EXT").add(ds);
+            ds.xmlContent =
+                    getRelsExtDSContent(obj.getPid(),
+                                        bDefPID,
+                                        cModelPID,
+                                        m_explicitBasicModel).getBytes("UTF-8");
+            obj.addDatastreamVersion(ds, false);
         } catch (UnsupportedEncodingException e) {
             throw new FaultException(e);
         }
     }
-   
-    @SuppressWarnings("unchecked")
+
     private void copyOtherDatastreams(DigitalObject obj) {
         for (String dsID : m_oldDatastreams.keySet()) {
-            List<Datastream> dsList = obj.datastreams(dsID);
-            if (dsList.size() == 0) {
-                dsList.add(m_oldDatastreams.get(dsID).copy());
+
+            if (!obj.datastreams(dsID).iterator().hasNext()) {
+                obj.addDatastreamVersion(m_oldDatastreams.get(dsID).copy(),
+                                         true);
             }
         }
     }
-    
-    private void fixXML(DatastreamXMLMetadata ds,
-            Map<String, String> newParts) {
+
+    private void fixXML(DatastreamXMLMetadata ds, Map<String, String> newParts) {
         try {
             String xml = new String(ds.xmlContent, "UTF-8");
             for (String oldName : newParts.keySet()) {
@@ -211,8 +218,8 @@ class BMechGenerator {
                 m_xmlFixer.setParameter("newName", newName);
                 StringReader source = new StringReader(xml);
                 StringWriter result = new StringWriter();
-                m_xmlFixer.transform(new StreamSource(source), 
-                        new StreamResult(result));
+                m_xmlFixer.transform(new StreamSource(source),
+                                     new StreamResult(result));
                 xml = result.toString();
             }
             ds.xmlContent = xml.getBytes("UTF-8");
@@ -223,25 +230,33 @@ class BMechGenerator {
             throw new FaultException(e);
         }
     }
-    
+
     //---
     // Static helpers
     //---
 
-    private static String getRelsExtDSContent(String pid, String bDefPID,
-            String cModelPID) {
+    private static String getRelsExtDSContent(String pid,
+                                              String bDefPID,
+                                              String cModelPID,
+                                              boolean explicitBasicModel) {
         StringBuffer out = new StringBuffer();
-        out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri 
-                + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri + "\">"
+        out
+                .append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri
+                        + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri
+                        + "\">" + CR);
+        out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid + "\">"
                 + CR);
-        out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid
-                + "\">" + CR);
-        out.append("    <fedora-model:" + Constants.MODEL.HAS_BDEF.localName
+        out.append("    <fedora-model:isDeploymentOf"
                 + " rdf:resource=\"info:fedora/" + bDefPID + "\"/>" + CR);
-        out.append("    <fedora-model:"
-                + Constants.MODEL.IS_CONTRACTOR.localName
+        out.append("    <fedora-model:isContractorOf"
                 + " rdf:resource=\"info:fedora/" + cModelPID + "\"/>" + CR);
-        out.append("  </rdf:Description>");
+        out.append("    <fedora-model:hasModel" + " rdf:resource=\""
+                + Models.SERVICE_DEPLOYMENT_3_0.uri + "\"/>" + CR);
+        if (explicitBasicModel) {
+            out.append("    <fedora-model:hasModel" + " rdf:resource=\""
+                    + Models.FEDORA_OBJECT_3_0.uri + "\"/>" + CR);
+        }
+        out.append("  </rdf:Description>" + CR);
         out.append("</rdf:RDF>");
         return out.toString();
     }

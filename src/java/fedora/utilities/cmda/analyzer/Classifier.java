@@ -30,7 +30,7 @@ public interface Classifier {
      * Example BMech Directives:
      * <pre>
      * OLD_BMECH demo:BMech1
-     * NEW_BMECH demo:GeneratedBMech1
+     * NEW_DEPLOYMENTS demo:GeneratedBMech1
      * NEW_PARTS FULL_SIZE=DS1 MEDIUM_SIZE=DS2
      * OLD_BMECH foo
      * NEW_BMECH bar
