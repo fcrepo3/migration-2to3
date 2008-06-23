@@ -512,7 +512,7 @@ public class DefaultClassifier
                         out.append(" MIME=\"" + mimeType + "\"");
                     }
                     if (formatURI != null) {
-                        out.append(" FORMAT_URIS=\"" + formatURI + "\"");
+                        out.append(" FORMAT_URI=\"" + formatURI + "\"");
                     }
                     out.append("/>" + CR);
                 }
