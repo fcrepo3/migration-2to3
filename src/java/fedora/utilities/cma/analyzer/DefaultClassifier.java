@@ -82,10 +82,6 @@ public class DefaultClassifier
     /** MIME type for RELS datastreams. */
     private static final String RELS_MIME_TYPE = "application/rdf+xml";
 
-    /** Old CModel property now accessed as an ext. property */
-    private static final String CMODEL_PROPERTY =
-            "info:fedora/fedora-system:def/model#contentModel";
-
     /** Whether the basic content model will be explicit in the output. */
     private final boolean m_explicitBasicModel;
 
@@ -264,7 +260,8 @@ public class DefaultClassifier
         addBoundDatastreams(assignments, dsIDs);
 
         return new Signature(m_aspects.contains(Aspect.ORIG_CONTENT_MODEL)
-                                     ? obj.getExtProperty(CMODEL_PROPERTY)
+                                     ? obj.getExtProperty(
+                                             Constants.MODEL.CONTENT_MODEL.uri)
                                      : null,
                              m_aspects.contains(Aspect.BDEF_PIDS) 
                                      ? getBDefPIDs(obj)
