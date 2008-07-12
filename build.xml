@@ -24,7 +24,7 @@
 
   <target name="doc">
     <mkdir dir="build/doc/api"/>
-    <javadoc packagenames="fedora.utilities.cmda.*"
+    <javadoc packagenames="fedora.utilities.cma.*"
              sourcepath="src/java"
              classpathref="analyzer.compile.classpath"
              destdir="build/doc/api"
@@ -37,7 +37,7 @@
   <target name="analyzer-classes">
     <mkdir dir="build/analyzer-classes"/>
     <javac srcdir="src/java" destdir="build/analyzer-classes" 
-           includes="fedora/utilities/cmda/analyzer/**
+           includes="fedora/utilities/cma/analyzer/**
                      fedora/utilities/file/**
                      fedora/utilities/digitalobject/**" 
            classpathref="analyzer.compile.classpath"
@@ -58,7 +58,7 @@
   <target name="generator-classes">
     <mkdir dir="build/generator-classes"/>
     <javac srcdir="src/java" destdir="build/generator-classes" 
-           includes="fedora/utilities/cmda/generator/**,fedora/utilities/digitalobject/**" 
+           includes="fedora/utilities/cma/generator/**,fedora/utilities/digitalobject/**" 
            classpathref="generator.compile.classpath"
            optimize="${optimize}" 
            debug="${debug}"
@@ -101,7 +101,7 @@
     <jar jarfile="build/analyzer-lib/analyzer-lib.jar"
          basedir="build/analyzer-classes">
       <manifest>
-        <attribute name="Main-Class" value="fedora.utilities.cmda.analyzer.Analyzer"/>
+        <attribute name="Main-Class" value="fedora.utilities.cma.analyzer.Analyzer"/>
       </manifest>
     </jar>
   </target>
@@ -144,7 +144,7 @@
     <jar jarfile="build/generator-lib/generator-lib.jar"
          basedir="build/generator-classes">
       <manifest>
-        <attribute name="Main-Class" value="fedora.utilities.cmda.generator.Generator"/>
+        <attribute name="Main-Class" value="fedora.utilities.cma.generator.Generator"/>
       </manifest>
     </jar>
   </target>
