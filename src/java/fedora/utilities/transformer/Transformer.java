@@ -38,14 +38,16 @@ public class Transformer {
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Transformer.class);
 
+    /** Option to make the basic content model explicit in the output. */
+    private static final String EXPLICIT_BASIC_MODEL = "explicitBasicModel";
+
     /** PID files this instance will run with. */
     private final List<File> m_pidFiles;
 
     /** Corresponding XSLT files this instance will use. */
     private final List<File> m_xsltFiles;
 
-    private static final String EXPLICIT_BASIC_MODEL = "explicitBasicModel";
-
+    /** Whether the basic content model will be made explicit in the output. */
     private final boolean m_explicitBasicModel;
 
     /**
@@ -57,6 +59,8 @@ public class Transformer {
      * @param xsltFiles
      *        xslt files containing transformation rules for each associated pid
      *        file.
+     * @param explicitBasicModel
+     *        whether to make the basic content model explicit in the output.
      * @throws IllegalArgumentException
      *         if pidFiles or xsltFiles are empty, a file listed doesn't exist,
      *         or the number of pidFiles and xsltFiles don't match.
@@ -244,10 +248,12 @@ public class Transformer {
      * @return the number of transformations done.
      * @throws TransformerException
      */
-    private static int transformOne(javax.xml.transform.Transformer xsltTransformer,
+    private static int transformOne(javax.xml.transform.Transformer
+                                            xsltTransformer,
                                     String pid,
                                     ObjectStore store,
-                                    boolean dryRun) throws TransformerException {
+                                    boolean dryRun)
+            throws TransformerException {
         InputStream str = store.getObjectStream(pid);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         StreamResult res = new StreamResult(out);
@@ -326,14 +332,16 @@ public class Transformer {
     }
 
     private static void transformAllFromProperties(Properties props) {
-        inferPathsFromSourceDir(props);
+        String sourceDirString = props.getProperty("sourceDir");
+        if (sourceDirString != null && sourceDirString.trim().length() > 0) {
+            inferPathsFromSourceDir(new File(sourceDirString.trim()),
+                                    props);
+        }
         try {
             Transformer transformer = new Transformer(props);
-            ObjectStore store =
-                    (ObjectStore) ConfigUtil
-                            .construct(props,
-                                       "objectStore",
-                                       "fedora.utilities.digitalobject.LocalRepoObjectStore");
+            ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
+                    "objectStore",
+                    "fedora.utilities.digitalobject.LocalRepoObjectStore");
             boolean dryRun =
                     ConfigUtil.getOptionalBoolean(props, "dryRun", false);
             transformer.transformAll(store, dryRun);
@@ -348,40 +356,48 @@ public class Transformer {
         }
     }
 
-    private static void inferPathsFromSourceDir(Properties props) {
-        String sourceDirString = props.getProperty("sourceDir");
-        if (sourceDirString != null && sourceDirString.trim().length() > 0) {
-            String pidFiles = "";
-            String xsltFiles = "";
-            File sourceDir = new File(sourceDirString.trim());
-            for (File file : sourceDir.listFiles()) {
-                if (file.getName().endsWith(".xslt")
-                        || file.getName().endsWith(".xsl")) {
-                    String path = file.getPath();
-                    int i = path.lastIndexOf(".");
-                    String pathPrefix = path.substring(0, i);
-                    File pidFile = new File(pathPrefix + ".txt");
-                    if (!pidFile.exists()) {
-                        pidFile = new File(pathPrefix + ".list");
+    // Sets the xsltFiles and pidFiles properties based on files in sourceDir
+    private static void inferPathsFromSourceDir(File sourceDir,
+                                                Properties props) {
+        String pidFiles = "";
+        String xsltFiles = "";
+        for (File file : sourceDir.listFiles()) {
+            if (file.getName().endsWith(".xslt")
+                    || file.getName().endsWith(".xsl")) {
+                String path = file.getPath();
+                int i = path.lastIndexOf(".");
+                String pathPrefix = path.substring(0, i);
+                File pidFile = getPidFile(pathPrefix);
+                if (pidFile != null) {
+                    if (xsltFiles.length() > 0) {
+                        xsltFiles += " ";
                     }
-                    if (!pidFile.exists()) {
-                        pidFile = new File(pathPrefix);
+                    xsltFiles += path;
+                    if (pidFiles.length() > 0) {
+                        pidFiles += " ";
                     }
-                    if (pidFile.exists()) {
-                        if (xsltFiles.length() > 0) {
-                            xsltFiles += " ";
-                        }
-                        xsltFiles += path;
-                        if (pidFiles.length() > 0) {
-                            pidFiles += " ";
-                        }
-                        pidFiles += pidFile.getPath();
-                    }
+                    pidFiles += pidFile.getPath();
                 }
             }
-            props.setProperty("xsltFiles", xsltFiles);
-            props.setProperty("pidFiles", pidFiles);
         }
+        props.setProperty("xsltFiles", xsltFiles);
+        props.setProperty("pidFiles", pidFiles);
+    }
+   
+    // gets a file with name pathPrefix.txt, pathPrefix.list,
+    // or simply pathPrefix if such a file exists, otherwise returns null.
+    private static File getPidFile(String pathPrefix) {
+        File pidFile = new File(pathPrefix + ".txt");
+        if (!pidFile.exists()) {
+            pidFile = new File(pathPrefix + ".list");
+        }
+        if (!pidFile.exists()) {
+            pidFile = new File(pathPrefix);
+        }
+        if (!pidFile.exists()) {
+            return null;
+        }
+        return pidFile;
     }
 
     private static int processArg(String[] args, int argPtr, Properties props) {

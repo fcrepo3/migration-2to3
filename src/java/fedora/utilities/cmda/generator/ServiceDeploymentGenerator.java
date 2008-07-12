@@ -62,6 +62,7 @@ class ServiceDeploymentGenerator {
     /** Stylesheet for fixing bMech datastreams. */
     private final Transformer m_xmlFixer;
 
+    /** Whether the basic content model will be explicit in the output. */
     private final boolean m_explicitBasicModel;
 
     /**
@@ -69,6 +70,8 @@ class ServiceDeploymentGenerator {
      * 
      * @param oldBMech
      *        the source behavior mechanism object.
+     * @param explicitBasicModel
+     *        whether the basic content model should be explicit in the output.
      */
     @SuppressWarnings("unchecked")
     public ServiceDeploymentGenerator(DigitalObject oldBMech,
@@ -140,7 +143,8 @@ class ServiceDeploymentGenerator {
         // the bdef pid is found in DSINPUTSPEC's root element,
         // <fbs:DSInputSpec bDefPID="demo:DualResImage"
         byte[] xmlContent =
-                ((DatastreamXMLMetadata) m_oldDatastreams.get("DSINPUTSPEC")).xmlContent;
+                ((DatastreamXMLMetadata) m_oldDatastreams
+                        .get("DSINPUTSPEC")).xmlContent;
         try {
             DocumentBuilderFactory factory =
                     DocumentBuilderFactory.newInstance();
@@ -178,7 +182,9 @@ class ServiceDeploymentGenerator {
         fixXML(ds, newParts);
     }
 
-    private void addRelsExt(DigitalObject obj, String bDefPID, String cModelPID) {
+    private void addRelsExt(DigitalObject obj,
+                            String bDefPID,
+                            String cModelPID) {
         DatastreamXMLMetadata ds = new DatastreamXMLMetadata("UTF-8");
         ds.DSVersionable = true;
         ds.DatastreamID = "RELS-EXT";
@@ -209,7 +215,9 @@ class ServiceDeploymentGenerator {
         }
     }
 
-    private void fixXML(DatastreamXMLMetadata ds, Map<String, String> newParts) {
+    private void fixXML(DatastreamXMLMetadata ds,
+                        Map<String,
+                        String> newParts) {
         try {
             String xml = new String(ds.xmlContent, "UTF-8");
             for (String oldName : newParts.keySet()) {

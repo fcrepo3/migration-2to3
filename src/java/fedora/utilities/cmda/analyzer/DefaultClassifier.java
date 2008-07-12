@@ -79,10 +79,11 @@ public class DefaultClassifier
     /** MIME type for RELS datastreams. */
     private static final String RELS_MIME_TYPE = "application/rdf+xml";
 
-    /* Old CModel property now accessed as an ext. property */
-    private final String CMODEL_PROPERTY =
+    /** Old CModel property now accessed as an ext. property */
+    private static final String CMODEL_PROPERTY =
             "info:fedora/fedora-system:def/model#contentModel";
 
+    /** Whether the basic content model will be explicit in the output. */
     private final boolean m_explicitBasicModel;
 
     /** Aspects used by this instance for the purpose of classification. */
@@ -133,7 +134,8 @@ public class DefaultClassifier
      * specified, should contain a space-delimited list of any of the following:
      * <ul>
      * <li> OrigContentModel</li>
-     * <li> DatastreamIDs (will cause MIMETypes and FormatURIs to be ignored)</li>
+     * <li> DatastreamIDs (will cause MIMETypes and FormatURIs to be ignored)
+     * </li>
      * <li> MIMETypes</li>
      * <li> FormatURIs</li>
      * </ul>
@@ -258,20 +260,22 @@ public class DefaultClassifier
 
         addBoundDatastreams(assignments, dsIDs);
 
-        return new Signature(m_aspects.contains(Aspect.ORIG_CONTENT_MODEL) ? obj
-                                     .getExtProperty(CMODEL_PROPERTY)
+        return new Signature(m_aspects.contains(Aspect.ORIG_CONTENT_MODEL)
+                                     ? obj.getExtProperty(CMODEL_PROPERTY)
                                      : null,
-                             m_aspects.contains(Aspect.BDEF_PIDS) ? getBDefPIDs(obj)
+                             m_aspects.contains(Aspect.BDEF_PIDS) 
+                                     ? getBDefPIDs(obj)
                                      : null,
-                             m_aspects.contains(Aspect.BMECH_PIDS) ? getBMechPIDs(obj)
+                             m_aspects.contains(Aspect.BMECH_PIDS)
+                                     ? getBMechPIDs(obj)
                                      : null,
                              assignments,
                              dsIDs,
-                             m_aspects.contains(Aspect.MIME_TYPES) ? getMIMETypes(obj,
-                                                                                  dsIDs)
+                             m_aspects.contains(Aspect.MIME_TYPES)
+                                     ? getMIMETypes(obj, dsIDs)
                                      : null,
-                             m_aspects.contains(Aspect.FORMAT_URIS) ? getFormatURIs(obj,
-                                                                                    dsIDs)
+                             m_aspects.contains(Aspect.FORMAT_URIS)
+                                     ? getFormatURIs(obj, dsIDs)
                                      : null);
     }
 
@@ -279,7 +283,8 @@ public class DefaultClassifier
     // Static helpers
     //---
 
-    private static void addBoundDatastreams(Map<String, Set<String>> assignments,
+    private static void addBoundDatastreams(Map<String,
+                                            Set<String>> assignments,
                                             Set<String> dsIDs) {
         // make sure required datastreams include those indicated by
         // binding key assignments
@@ -328,7 +333,8 @@ public class DefaultClassifier
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Set<String>> getBindingKeyAssignments(DigitalObject obj) {
+    private static Map<String, Set<String>> getBindingKeyAssignments(
+                DigitalObject obj) {
         Map<String, Set<String>> map = new HashMap<String, Set<String>>();
         Iterator dissIDs = obj.disseminatorIdIterator();
         while (dissIDs.hasNext()) {
@@ -402,7 +408,8 @@ public class DefaultClassifier
     }
 
     @SuppressWarnings("unchecked")
-    private static Datastream getLatestDSVersion(DigitalObject obj, String dsID) {
+    private static Datastream getLatestDSVersion(DigitalObject obj,
+                                                 String dsID) {
         Datastream latest = null;
         Iterator dses = obj.datastreams(dsID).iterator();
         while (dses.hasNext()) {

@@ -15,6 +15,7 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import fedora.common.Constants;
 import fedora.common.FaultException;
 
 import fedora.server.storage.translation.DOSerializer;
@@ -113,10 +114,6 @@ public class Analyzer {
     /** Suffix for content model membership list filenames. */
     private static final String MEMBER_SUFFIX = ".members.txt";
 
-    /* Old ftype (rdf type) property now accessed as an ext. property */
-    private final String FTYPE_PROPERTY =
-            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-
     //---
     // Instance variables
     //---
@@ -208,22 +205,25 @@ public class Analyzer {
         PrintWriter sDepWriter;
         PrintWriter sDefWriter;
         try {
-            noCModelWriter =
-                    new PrintWriter(new OutputStreamWriter(new FileOutputStream(new File(outputDir,
-                                                                                         "nocmodel.txt")),
-                                                           "UTF-8"));
+            noCModelWriter = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(
+                                new File(outputDir, "nocmodel.txt")),
+                            "UTF-8"));
             noCModelWriter.println("# The following objects will be upgraded "
                     + "with no content model");
-            sDepWriter =
-                    new PrintWriter(new OutputStreamWriter(new FileOutputStream(new File(outputDir,
-                                                                                         "sdeps.txt")),
-                                                           "UTF-8"));
+            sDepWriter = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(
+                                    new File(outputDir, "sdeps.txt")),
+                                    "UTF-8"));
             sDepWriter.println("# The following Behavior Mechanism objects"
                     + " will be upgraded into Service Deployments");
-            sDefWriter =
-                    new PrintWriter(new OutputStreamWriter(new FileOutputStream(new File(outputDir,
-                                                                                         "sdefs.txt")),
-                                                           "UTF-8"));
+            sDefWriter = new PrintWriter(
+                    new OutputStreamWriter(
+                            new FileOutputStream(
+                                    new File(outputDir, "sdefs.txt")),
+                            "UTF-8"));
             sDefWriter.println("# The following Behavior Definition objects"
                     + " will be upgraded into Service Definitions");
         } catch (IOException e) {
@@ -231,7 +231,7 @@ public class Analyzer {
         }
         try {
             for (DigitalObject object : lister) {
-                String ftype = object.getExtProperty(FTYPE_PROPERTY);
+                String ftype = object.getExtProperty(Constants.RDF.TYPE.uri);
                 if ("FedoraObject".equals(ftype)) {
                     DigitalObject cModel = m_classifier.getContentModel(object);
                     if (cModel == null) {
@@ -281,12 +281,14 @@ public class Analyzer {
             if (directives != null) {
                 LOG.info("Writing deployment directives for content model "
                         + obj.getPid());
-                String bMechsFilename = CMODEL_PREFIX + num + ".deployments.txt";
-                File file = new File(m_outputDir, bMechsFilename);
+                File file = new File(m_outputDir,
+                                     CMODEL_PREFIX + num + ".deployments.txt");
                 try {
                     PrintWriter writer =
-                            new PrintWriter(new OutputStreamWriter(new FileOutputStream(file),
-                                                                   "UTF-8"));
+                            new PrintWriter(
+                                    new OutputStreamWriter(
+                                            new FileOutputStream(file),
+                                            "UTF-8"));
                     writer.println("# The following BMechs will be copied and "
                             + "written as FOXML1.1 service deployments");
                     writer.println("# with new PIDs and part names as given "
@@ -294,7 +296,8 @@ public class Analyzer {
                     writer.println(directives);
                     writer.close();
                 } catch (IOException e) {
-                    throw new FaultException("Error writing deployment directives: "
+                    throw new FaultException(
+                            "Error writing deployment directives: "
                             + file.getPath(), e);
                 }
             }
@@ -310,8 +313,8 @@ public class Analyzer {
                     new File(m_outputDir, MEMBER_PREFIX + m_cModelCount
                             + MEMBER_SUFFIX);
             try {
-                writer =
-                        new PrintWriter(new OutputStreamWriter(new FileOutputStream(file)));
+                writer = new PrintWriter(
+                        new OutputStreamWriter(new FileOutputStream(file)));
                 m_memberLists.put(cModel, writer);
                 writer.println("# The following objects will be assigned to "
                         + "cmodel-" + m_cModelCount);
