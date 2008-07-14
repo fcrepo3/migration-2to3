@@ -23,7 +23,9 @@ import fedora.common.FaultException;
 import fedora.server.storage.translation.DODeserializer;
 import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.types.DigitalObject;
+import fedora.server.storage.types.DigitalObjectUtil;
 
+import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
 import fedora.utilities.digitalobject.RepoUtil;
@@ -169,28 +171,28 @@ public class Generator {
                 "<xsl:param name=\"cModelPidURI\" select=\"'info:fedora/"
                 + cModel.getPid() + "'\"");
         FileUtil.writeTextFile(xslt, xsltFile);
-        File bMechsFile = new File(m_sourceDir, "cmodel-" + key
+        File sDepsFile = new File(m_sourceDir, "cmodel-" + key
                 + ".deployments.txt");
-        if (bMechsFile.exists()) {
+        if (sDepsFile.exists()) {
             LOG.info("Generating service deployment object(s) for "
                     + "content model " + cModel.getPid());
-            generateBMechs(bMechsFile, key, cModel.getPid());
+            generateSDeps(sDepsFile, key, cModel.getPid());
         }
     }
     
-    private void generateBMechs(File bMechsFile, String key, String cModelPID) {
+    private void generateSDeps(File sDepsFile, String key, String cModelPID) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    new FileInputStream(bMechsFile), "UTF-8"));
-            generateBMechs(reader, key, cModelPID);
+                    new FileInputStream(sDepsFile), "UTF-8"));
+            generateSDeps(reader, key, cModelPID);
             reader.close();
         } catch (IOException e) {
             throw new FaultException("Error generating service deployment(s) "
-                    + "from " + bMechsFile.getPath(), e);
+                    + "from " + sDepsFile.getPath(), e);
         }
     }
     
-    private void generateBMechs(BufferedReader reader, String key,
+    private void generateSDeps(BufferedReader reader, String key,
             String cModelPID)
             throws IOException {
         String line = reader.readLine();
@@ -209,7 +211,7 @@ public class Generator {
                     i++;
                     File outFile = new File(m_sourceDir, "cmodel-" + key
                             + ".deployment" + i + ".xml");
-                    generateBMech(oldPID, newPID,
+                    generateSDep(oldPID, newPID,
                             parseNewParts(parts), outFile, cModelPID);
                 }
             }
@@ -226,7 +228,7 @@ public class Generator {
         return map;
     }
    
-    private void generateBMech(String oldPID, String newPID, 
+    private void generateSDep(String oldPID, String newPID, 
             Map<String, String> newParts, File outFile, String cModelPID) {
         LOG.info("Generating service deployment " + newPID
                 + " from original, " + oldPID);
@@ -235,11 +237,13 @@ public class Generator {
             throw new FaultException("BMech not found in repository: "
                     + oldPID);
         }
-        ServiceDeploymentGenerator bMechGen =
+        // Update MIME types and Format URIs before processing
+        DigitalObjectUtil.updateLegacyDatastreams(oldBMech);
+        ServiceDeploymentGenerator sDepGen =
                 new ServiceDeploymentGenerator(oldBMech,
                                                m_explicitBasicModel);
-        DigitalObject newBMech = bMechGen.generate(newPID, newParts, cModelPID);
-        RepoUtil.writeObject(m_serializer, newBMech, outFile); 
+        DigitalObject newSDep = sDepGen.generate(newPID, newParts, cModelPID);
+        RepoUtil.writeObject(m_serializer, newSDep, outFile); 
     }
     
     //---
@@ -252,15 +256,10 @@ public class Generator {
      * @param args command-line arguments.
      */
     public static void main(String[] args) {
+        Log4J.force();
         // HACK: make DOTranslatorUtility happy
         System.setProperty("fedoraServerHost", "localhost");
         System.setProperty("fedoraServerPort", "80");
-        // HACK: make commons-logging happy
-        final String pfx = "org.apache.commons.logging.";
-        if (System.getProperty(pfx + "LogFactory") == null) {
-            System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
-            System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
-        }
         if (args.length != 1) {
             System.out.println(Messages.GENERATOR_USAGE);
             System.exit(0);

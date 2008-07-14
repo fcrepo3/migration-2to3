@@ -30,7 +30,8 @@ import fedora.server.storage.types.Disseminator;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.PIDGenerator;
 
-import static fedora.utilities.cma.analyzer.Constants.CHAR_ENCODING;
+import static fedora.utilities.cma.analyzer.Constants.CR;
+import static fedora.utilities.cma.analyzer.Constants.UTF8;
 
 /**
  * A classifier that can use several key aspects of the given objects to assign
@@ -52,35 +53,25 @@ public class DefaultClassifier
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(DefaultClassifier.class);
 
-    /** Line separator for this platform. */
-    private static final String CR = System.getProperty("line.separator");
-
     /** Control group to use for Inline XML datastreams. */
-    private static final String INLINE_DS_CONTROL_GROUP = "X";
+    private static final String INLINE_XML = "X";
 
-    /** MIME type to use for Inline XML datastreams. */
-    private static final String INLINE_DS_MIME_TYPE = "text/xml";
+    /** The text/xml MIME type. */
+    private static final String TEXT_XML = "text/xml";
 
-    /** Datastream version ID suffix. */
-    private static final String DS_VERSION_ID_SUFFIX = "1.0";
+    /** The application/rdf+xml MIME type. */
+    private static final String RDF_XML = "application/rdf+xml";
 
-    /** Datastream ID for composite model datastreams. */
-    private static final String COMP_MODEL_DS_ID = "DS-COMPOSITE-MODEL";
-
-    /** Label for composite model datastreams. */
-    private static final String COMP_MODEL_DS_LABEL = "DS Composite Model";
-
-    /** Datastream ID for RELS-EXT datastreams. */
-    private static final String RELS_EXT_DS_ID = "RELS-EXT";
+    /** Label for DS-COMPOSITE-MODEL datastreams. */
+    private static final String DS_COMPOSITE_MODEL_LABEL =
+            "Datastream Composite Model";
 
     /** Label for RELS-EXT datastreams. */
-    private static final String RELS_EXT_DS_LABEL = "Relationships";
-
-    /** Datastream ID for RELS-INT datastreams. */
-    private static final String RELS_INT_DS_ID = "RELS-INT";
-
-    /** MIME type for RELS datastreams. */
-    private static final String RELS_MIME_TYPE = "application/rdf+xml";
+    private static final String RELS_EXT_LABEL =
+            "RDF Statements about this object";
+    
+    /** Current date/time, for new datastreams. */
+    private static final Date NOW = new Date();
 
     /** Whether the basic content model will be explicit in the output. */
     private final boolean m_explicitBasicModel;
@@ -194,7 +185,7 @@ public class DefaultClassifier
         if (bMechPIDs == null || bMechPIDs.size() == 0) {
             return null;
         }
-        StringBuffer out = new StringBuffer();
+        StringBuilder out = new StringBuilder();
         int i = 0;
         for (String origPID : bMechPIDs) {
             out.append("OLD_BMECH " + origPID + CR);
@@ -237,10 +228,17 @@ public class DefaultClassifier
         DigitalObject cModelObj = new BasicDigitalObject();
         cModelObj.setLabel("Generated CModel");
         cModelObj.setPid(m_pidGen.getNextPID().toString());
-        addRelsExtDSIfNeeded(cModelObj, signature, m_explicitBasicModel);
-        addCompModelDSIfNeeded(cModelObj, signature);
+        addRelsExtIfNeeded(cModelObj, signature, m_explicitBasicModel);
+        addInlineDS(cModelObj,
+                    "DS-COMPOSITE-MODEL",
+                    TEXT_XML,
+                    Constants.DS_COMPOSITE_MODEL1_0.uri,
+                    DS_COMPOSITE_MODEL_LABEL,
+                    getDSCompositeModelContent(signature));
         addInlineDS(cModelObj,
                     "CLASS-DESCRIPTION",
+                    TEXT_XML,
+                    null,
                     "Technical description of the class of objects assigned to"
                             + " this content model",
                     "<class-description>" + CR + signature.toString() + CR
@@ -368,29 +366,21 @@ public class DefaultClassifier
                                                     Set<String> dsIDs) {
         Map<String, String> map = new HashMap<String, String>();
         for (String dsID : dsIDs) {
-            String dsMIME;
-            if (dsID.equals(RELS_EXT_DS_ID) || dsID.equals(RELS_INT_DS_ID)) {
-                dsMIME = RELS_MIME_TYPE;
-            } else {
-                Datastream ds = getLatestDSVersion(obj, dsID);
-                dsMIME = ds.DSMIME;
-            }
-            map.put(dsID, dsMIME);
+            map.put(dsID, getLatestDSVersion(obj, dsID).DSMIME);
         }
         return map;
     }
-
+    
     @SuppressWarnings("unchecked")
     private static Map<String, String> getFormatURIs(DigitalObject obj,
                                                      Set<String> dsIDs) {
         Map<String, String> map = new HashMap<String, String>();
         for (String dsID : dsIDs) {
-            Datastream ds = getLatestDSVersion(obj, dsID);
-            map.put(dsID, ds.DSFormatURI);
+            map.put(dsID, getLatestDSVersion(obj, dsID).DSFormatURI);
         }
         return map;
     }
-
+   
     @SuppressWarnings("unchecked")
     private static Disseminator getLatestDissVersion(DigitalObject obj,
                                                      String dissID) {
@@ -422,62 +412,51 @@ public class DefaultClassifier
         return latest;
     }
 
-    private static void addRelsExtDSIfNeeded(DigitalObject cModelObj,
+    private static void addRelsExtIfNeeded(DigitalObject cModelObj,
                                              Signature signature,
                                              boolean explicitBasicModel) {
         if (signature.getBDefPIDs() != null
                 && signature.getBDefPIDs().size() > 0) {
             addInlineDS(cModelObj,
-                        RELS_EXT_DS_ID,
-                        RELS_EXT_DS_LABEL,
-                        getRelsExtDSContent(signature,
-                                            cModelObj.getPid(),
-                                            explicitBasicModel));
-        }
-    }
-
-    private static void addCompModelDSIfNeeded(DigitalObject cModelObj,
-                                               Signature signature) {
-        if (signature.getDatastreamIDs() != null
-                && signature.getDatastreamIDs().size() > 0) {
-            addInlineDS(cModelObj,
-                        COMP_MODEL_DS_ID,
-                        COMP_MODEL_DS_LABEL,
-                        getCompModelDSContent(signature));
+                        "RELS-EXT",
+                        RDF_XML,
+                        Constants.RELS_EXT1_0.uri,
+                        RELS_EXT_LABEL,
+                        getRelsExtContent(signature,
+                                          cModelObj.getPid(),
+                                          explicitBasicModel));
         }
     }
 
     @SuppressWarnings("unchecked")
     private static void addInlineDS(DigitalObject obj,
                                     String dsID,
+                                    String mimeType,
+                                    String formatURI,
                                     String dsLabel,
                                     String xml) {
-        DatastreamXMLMetadata ds = new DatastreamXMLMetadata(CHAR_ENCODING);
+        DatastreamXMLMetadata ds = new DatastreamXMLMetadata(UTF8);
         ds.DSVersionable = true;
         ds.DatastreamID = dsID;
-        ds.DSVersionID = dsID + DS_VERSION_ID_SUFFIX;
-        ds.DSControlGrp = INLINE_DS_CONTROL_GROUP;
+        ds.DSVersionID = dsID + "1.0";
+        ds.DSControlGrp = INLINE_XML;
         ds.DSLabel = dsLabel;
-        ds.DSCreateDT = new Date();
-
-        if (dsID.equals(RELS_EXT_DS_ID) || dsID.equals(RELS_INT_DS_ID)) {
-            ds.DSMIME = RELS_MIME_TYPE;
-        } else {
-            ds.DSMIME = INLINE_DS_MIME_TYPE;
-        }
+        ds.DSCreateDT = NOW;
+        ds.DSMIME = mimeType;
+        ds.DSFormatURI = formatURI;
 
         try {
-            ds.xmlContent = xml.getBytes(CHAR_ENCODING);
+            ds.xmlContent = xml.getBytes(UTF8);
             obj.addDatastreamVersion(ds, false);
         } catch (UnsupportedEncodingException e) {
             throw new FaultException(e);
         }
     }
 
-    private static String getRelsExtDSContent(Signature signature,
-                                              String pid,
-                                              boolean explicitBasicModel) {
-        StringBuffer out = new StringBuffer();
+    private static String getRelsExtContent(Signature signature,
+                                            String pid,
+                                            boolean explicitBasicModel) {
+        StringBuilder out = new StringBuilder();
         out
                 .append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri
                         + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri
@@ -504,8 +483,8 @@ public class DefaultClassifier
         return out.toString();
     }
 
-    private static String getCompModelDSContent(Signature signature) {
-        StringBuffer out = new StringBuffer();
+    private static String getDSCompositeModelContent(Signature signature) {
+        StringBuilder out = new StringBuilder();
         out.append("<dsCompositeModel xmlns=\""
                 + Constants.DS_COMPOSITE_MODEL.uri + "\">" + CR);
         if (signature.getDatastreamIDs() != null) {

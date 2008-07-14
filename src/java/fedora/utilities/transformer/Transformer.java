@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 
 import fedora.common.FaultException;
 
+import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectStore;
 import fedora.utilities.file.FileUtil;
@@ -279,15 +280,10 @@ public class Transformer {
      *        command-line arguments.
      */
     public static void main(String[] args) {
+        Log4J.force();
         // HACK: make DOTranslatorUtility happy
         System.setProperty("fedoraServerHost", "localhost");
         System.setProperty("fedoraServerPort", "80");
-        // HACK: make commons-logging happy
-        final String pfx = "org.apache.commons.logging.";
-        if (System.getProperty(pfx + "LogFactory") == null) {
-            System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
-            System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
-        }
         transformAllFromProperties(getTransformationProperties(args));
     }
 

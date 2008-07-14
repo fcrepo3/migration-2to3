@@ -13,9 +13,14 @@ package fedora.utilities.cma.analyzer;
 abstract class Constants {
   
     /**
+     * Line separator for this platform.
+     */
+    static final String CR = System.getProperty("line.separator");
+
+    /**
      * Standard character encoding for I/O;
      * <code>UTF-8</code>
      */
-    static final String CHAR_ENCODING = "UTF-8";
+    static final String UTF8 = "UTF-8";
 
 }

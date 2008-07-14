@@ -24,13 +24,15 @@ import fedora.common.FaultException;
 import fedora.server.storage.translation.DOSerializer;
 import fedora.server.storage.types.DatastreamXMLMetadata;
 import fedora.server.storage.types.DigitalObject;
+import fedora.server.storage.types.DigitalObjectUtil;
 
+import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.ObjectLister;
 import fedora.utilities.digitalobject.RepoUtil;
 import fedora.utilities.file.FileUtil;
 
-import static fedora.utilities.cma.analyzer.Constants.CHAR_ENCODING;
+import static fedora.utilities.cma.analyzer.Constants.UTF8;
 
 /**
  * Utility for analyzing a set of Fedora objects and outputting content model
@@ -197,6 +199,7 @@ public class Analyzer {
      *        if the output directory contains files, and this is true, they
      *        will be automatically deleted before classification begins.
      */
+    @SuppressWarnings("deprecation")
     public void classifyAll(ObjectLister lister,
                             File outputDir,
                             boolean clearOutputDir) {
@@ -212,21 +215,21 @@ public class Analyzer {
                     new OutputStreamWriter(
                             new FileOutputStream(
                                 new File(outputDir, "nocmodel.txt")),
-                            "UTF-8"));
+                            UTF8));
             noCModelWriter.println("# The following objects will be upgraded "
                     + "with no content model");
             sDepWriter = new PrintWriter(
                     new OutputStreamWriter(
                             new FileOutputStream(
                                     new File(outputDir, "sdeps.txt")),
-                                    "UTF-8"));
+                                    UTF8));
             sDepWriter.println("# The following Behavior Mechanism objects"
                     + " will be upgraded into Service Deployments");
             sDefWriter = new PrintWriter(
                     new OutputStreamWriter(
                             new FileOutputStream(
                                     new File(outputDir, "sdefs.txt")),
-                            "UTF-8"));
+                            UTF8));
             sDefWriter.println("# The following Behavior Definition objects"
                     + " will be upgraded into Service Definitions");
         } catch (IOException e) {
@@ -234,17 +237,21 @@ public class Analyzer {
         }
         try {
             for (DigitalObject object : lister) {
+                // Update MIME types and Format URIs before processing
+                DigitalObjectUtil.updateLegacyDatastreams(object);
                 String ftype = object.getExtProperty(Constants.RDF.TYPE.uri);
-                if ("FedoraObject".equals(ftype)) {
+                if (Constants.MODEL.DATA_OBJECT.looselyMatches(ftype, false)) {
                     DigitalObject cModel = m_classifier.getContentModel(object);
                     if (cModel == null) {
                         noCModelWriter.println(object.getPid());
                     } else {
                         recordMembership(object, cModel);
                     }
-                } else if ("FedoraBMechObject".equals(ftype)) {
+                } else if (Constants.MODEL.BMECH_OBJECT.looselyMatches(ftype,
+                                                                       false)) {
                     sDepWriter.println(object.getPid());
-                } else if ("FedoraBDefObject".equals(ftype)) {
+                } else if (Constants.MODEL.BDEF_OBJECT.looselyMatches(ftype,
+                                                                      false)) {
                     sDefWriter.println(object.getPid());
                 }
                 objectCount++;
@@ -291,7 +298,7 @@ public class Analyzer {
                             new PrintWriter(
                                     new OutputStreamWriter(
                                             new FileOutputStream(file),
-                                            "UTF-8"));
+                                            UTF8));
                     writer.println("# The following BMechs will be copied and "
                             + "written as FOXML1.1 service deployments");
                     writer.println("# with new PIDs and part names as given "
@@ -336,10 +343,10 @@ public class Analyzer {
                 (DatastreamXMLMetadata) cModel.datastreams("CLASS-DESCRIPTION")
                         .iterator().next();
         try {
-            String xml = new String(ds.xmlContent, CHAR_ENCODING);
+            String xml = new String(ds.xmlContent, UTF8);
             writer.println("# " + xml.replaceAll("\\n", "\r\n# "));
         } catch (IOException e) {
-            LOG.warn("Unsupported encoding: " + CHAR_ENCODING);
+            LOG.warn("Unsupported encoding: " + UTF8);
         }
     }
 
@@ -386,15 +393,10 @@ public class Analyzer {
      *        command-line arguments.
      */
     public static void main(String[] args) {
+        Log4J.force();
         // HACK: make DOTranslatorUtility happy
         System.setProperty("fedoraServerHost", "localhost");
         System.setProperty("fedoraServerPort", "80");
-        // HACK: make commons-logging happy
-        final String pfx = "org.apache.commons.logging.";
-        if (System.getProperty(pfx + "LogFactory") == null) {
-            System.setProperty(pfx + "LogFactory", pfx + "impl.Log4jFactory");
-            System.setProperty(pfx + "Log", pfx + "impl.Log4JLogger");
-        }
         if (args.length != 1) {
             System.out.println(Messages.ANALYZER_USAGE);
             System.exit(0);

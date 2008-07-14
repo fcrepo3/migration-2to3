@@ -45,9 +45,12 @@ import fedora.server.storage.types.DigitalObject;
  * @author Chris Wilper
  */
 class ServiceDeploymentGenerator {
-
+    
     /** System-dependent line separator. */
     private static final String CR = System.getProperty("line.separator");
+
+    /** Current date/time, for new datastreams. */
+    private static final Date NOW = new Date();
 
     /** The source behavior mechanism object. */
     private final DigitalObject m_oldBMech;
@@ -190,14 +193,15 @@ class ServiceDeploymentGenerator {
         ds.DSVersionID = "RELS-EXT" + "1.0";
         ds.DSControlGrp = "X";
         ds.DSMIME = "application/rdf+xml";
-        ds.DSLabel = "Relationships";
-        ds.DSCreateDT = new Date();
+        ds.DSFormatURI = Constants.RELS_EXT1_0.uri;
+        ds.DSLabel = "RDF Statements about this object";
+        ds.DSCreateDT = NOW;
         try {
             ds.xmlContent =
-                    getRelsExtDSContent(obj.getPid(),
-                                        bDefPID,
-                                        cModelPID,
-                                        m_explicitBasicModel).getBytes("UTF-8");
+                    getRelsExtContent(obj.getPid(),
+                                      bDefPID,
+                                      cModelPID,
+                                      m_explicitBasicModel).getBytes("UTF-8");
             obj.addDatastreamVersion(ds, false);
         } catch (UnsupportedEncodingException e) {
             throw new FaultException(e);
@@ -215,8 +219,7 @@ class ServiceDeploymentGenerator {
     }
 
     private void fixXML(DatastreamXMLMetadata ds,
-                        Map<String,
-                        String> newParts) {
+                        Map<String, String> newParts) {
         try {
             String xml = new String(ds.xmlContent, "UTF-8");
             for (String oldName : newParts.keySet()) {
@@ -242,7 +245,7 @@ class ServiceDeploymentGenerator {
     // Static helpers
     //---
 
-    private static String getRelsExtDSContent(String pid,
+    private static String getRelsExtContent(String pid,
                                               String bDefPID,
                                               String cModelPID,
                                               boolean explicitBasicModel) {
