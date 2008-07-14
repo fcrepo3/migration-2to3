@@ -111,6 +111,9 @@ public class Generator {
      * @param props the properties to get configuration values from.
      */
     public Generator(Properties props) {
+        if (props.getProperty("clearObjectPaths") == null) {
+            props.setProperty("clearObjectPaths", "false");
+        }
         m_store = (ObjectStore) ConfigUtil.construct(props,
                 "objectStore",
                 "fedora.utilities.digitalobject.LocalRepoObjectStore");

@@ -335,6 +335,9 @@ public class Transformer {
         }
         try {
             Transformer transformer = new Transformer(props);
+            if (props.getProperty("clearObjectPaths") == null) {
+                props.setProperty("clearObjectPaths", "false");
+            }
             ObjectStore store = (ObjectStore) ConfigUtil.construct(props,
                     "objectStore",
                     "fedora.utilities.digitalobject.LocalRepoObjectStore");

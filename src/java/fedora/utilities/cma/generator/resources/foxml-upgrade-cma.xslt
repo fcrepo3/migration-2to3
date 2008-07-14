@@ -156,113 +156,127 @@
 
   <!-- Update DC for all objects -->
   <xsl:template match="//foxml:datastream[@ID='DC']/foxml:datastreamVersion">
-    <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-    <!-- Force expected MIMETYPE and FORMAT_URI values -->
-    <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-    <xsl:attribute name="FORMAT_URI">http://www.openarchives.org/OAI/2.0/oai_dc/</xsl:attribute>
-    <xsl:apply-templates/>
+    <xsl:copy>
+      <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+      <!-- Force expected MIMETYPE and FORMAT_URI values -->
+      <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+      <xsl:attribute name="FORMAT_URI">http://www.openarchives.org/OAI/2.0/oai_dc/</xsl:attribute>
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update RELS-EXT for all objects -->
   <xsl:template match="//foxml:datastream[@ID='RELS-EXT']/foxml:datastreamVersion">
-    <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-    <!-- Force expected MIMETYPE and FORMAT_URI values -->
-    <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
-    <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraRELSExt-1.0</xsl:attribute>
-    <xsl:choose>
-      <xsl:when test="@CREATED = $maxCreatedDate">
-        <!-- Latest version; add hasModel relationship(s) as needed -->
-        <xsl:call-template name="addCModelRels"/>
-      </xsl:when>
-      <xsl:otherwise>
-        <!-- Not latest version; copy element children unchanged --> 
-        <xsl:apply-templates/>
-      </xsl:otherwise>
-    </xsl:choose>
+    <xsl:copy>
+      <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+      <!-- Force expected MIMETYPE and FORMAT_URI values -->
+      <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
+      <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraRELSExt-1.0</xsl:attribute>
+      <xsl:choose>
+        <xsl:when test="@CREATED = $maxCreatedDate">
+          <!-- Latest version; add hasModel relationship(s) as needed -->
+          <xsl:call-template name="addCModelRels"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <!-- Not latest version; copy element children unchanged --> 
+          <xsl:apply-templates/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update RELS-INT for all objects -->
   <xsl:template match="//foxml:datastream[@ID='RELS-INT']/foxml:datastreamVersion">
-    <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-    <!-- Force expected MIMETYPE and FORMAT_URI values -->
-    <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
-    <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraRELSInt-1.0</xsl:attribute>
-    <!-- Copy element children unchanged --> 
-    <xsl:apply-templates/>
+    <xsl:copy>
+      <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+      <!-- Force expected MIMETYPE and FORMAT_URI values -->
+      <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
+      <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraRELSInt-1.0</xsl:attribute>
+      <!-- Copy element children unchanged --> 
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update POLICY for all objects -->
   <xsl:template match="//foxml:datastream[@ID='POLICY']/foxml:datastreamVersion">
-    <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-    <!-- Force expected MIMETYPE and FORMAT_URI values -->
-    <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-    <xsl:attribute name="FORMAT_URI">urn:oasis:names:tc:xacml:1.0:policy</xsl:attribute>
-    <!-- Copy element children unchanged --> 
-    <xsl:apply-templates/>
+    <xsl:copy>
+      <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+      <!-- Force expected MIMETYPE and FORMAT_URI values -->
+      <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+      <xsl:attribute name="FORMAT_URI">urn:oasis:names:tc:xacml:1.0:policy</xsl:attribute>
+      <!-- Copy element children unchanged --> 
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update METHODMAP for SDefs and SDeps -->
   <xsl:template match="//foxml:datastream[@ID='METHODMAP']/foxml:datastreamVersion">
-    <xsl:choose>
-      <xsl:when
-        test="$fedoraModel = 'info:fedora/fedora-system:ServiceDefinition-3.0'">
-        <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-        <!-- Force expected MIMETYPE and FORMAT_URI values -->
-        <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-        <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDefMethodMap-1.0</xsl:attribute>
-      </xsl:when>
-      <xsl:when
-        test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
-        <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-        <!-- Force expected MIMETYPE and FORMAT_URI values -->
-        <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-        <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDepMethodMap-1.0</xsl:attribute>
-      </xsl:when>
-      <xsl:otherwise>
-        <!-- Not an SDef or SDep, leave attributes unchanged --> 
-        <xsl:apply-templates select="@*"/>
-      </xsl:otherwise>
-    </xsl:choose>
-    <!-- Copy element children unchanged --> 
-    <xsl:apply-templates/>
+    <xsl:copy>
+      <xsl:choose>
+        <xsl:when
+          test="$fedoraModel = 'info:fedora/fedora-system:ServiceDefinition-3.0'">
+          <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+          <!-- Force expected MIMETYPE and FORMAT_URI values -->
+          <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDefMethodMap-1.0</xsl:attribute>
+        </xsl:when>
+        <xsl:when
+          test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
+          <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+          <!-- Force expected MIMETYPE and FORMAT_URI values -->
+          <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDepMethodMap-1.0</xsl:attribute>
+        </xsl:when>
+        <xsl:otherwise>
+          <!-- Not an SDef or SDep, leave attributes unchanged --> 
+          <xsl:apply-templates select="@*"/>
+        </xsl:otherwise>
+      </xsl:choose>
+      <!-- Copy element children unchanged --> 
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update DSINPUTSPEC for SDeps -->
   <xsl:template match="//foxml:datastream[@ID='DSINPUTSPEC']/foxml:datastreamVersion">
-    <xsl:choose>
-      <xsl:when
-        test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
-        <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-        <!-- Force expected MIMETYPE and FORMAT_URI values -->
-        <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-        <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraDSInputSpec-1.0</xsl:attribute>
-      </xsl:when>
-      <xsl:otherwise>
-        <!-- Not an SDep, leave attributes unchanged --> 
-        <xsl:apply-templates select="@*"/>
-      </xsl:otherwise>
-    </xsl:choose>
-    <!-- Copy element children unchanged --> 
-    <xsl:apply-templates/>
+    <xsl:copy>
+      <xsl:choose>
+        <xsl:when
+          test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
+          <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+          <!-- Force expected MIMETYPE and FORMAT_URI values -->
+          <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraDSInputSpec-1.0</xsl:attribute>
+        </xsl:when>
+        <xsl:otherwise>
+          <!-- Not an SDep, leave attributes unchanged --> 
+          <xsl:apply-templates select="@*"/>
+        </xsl:otherwise>
+      </xsl:choose>
+      <!-- Copy element children unchanged --> 
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
 
   <!-- Update WSDL for SDeps -->
-  <xsl:template match="//foxml:datastream[@ID='DSINPUTSPEC']/foxml:datastreamVersion">
-    <xsl:choose>
-      <xsl:when
-        test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
-        <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != FORMAT_URI]"/>
-        <!-- Force expected MIMETYPE and FORMAT_URI values -->
-        <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-        <xsl:attribute name="FORMAT_URI">http://schemas.xmlsoap.org/wsdl/</xsl:attribute>
-      </xsl:when>
-      <xsl:otherwise>
-        <!-- Not an SDep, leave attributes unchanged --> 
-        <xsl:apply-templates select="@*"/>
-      </xsl:otherwise>
-    </xsl:choose>
-    <!-- Copy element children unchanged --> 
-    <xsl:apply-templates/>
+  <xsl:template match="//foxml:datastream[@ID='WSDL']/foxml:datastreamVersion">
+    <xsl:copy>
+      <xsl:choose>
+        <xsl:when
+          test="$fedoraModel = 'info:fedora/fedora-system:ServiceDeployment-3.0'">
+          <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
+          <!-- Force expected MIMETYPE and FORMAT_URI values -->
+          <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">http://schemas.xmlsoap.org/wsdl/</xsl:attribute>
+        </xsl:when>
+        <xsl:otherwise>
+          <!-- Not an SDep, leave attributes unchanged --> 
+          <xsl:apply-templates select="@*"/>
+        </xsl:otherwise>
+      </xsl:choose>
+      <!-- Copy element children unchanged --> 
+      <xsl:apply-templates/>
+    </xsl:copy>
   </xsl:template>
     
   <!-- 

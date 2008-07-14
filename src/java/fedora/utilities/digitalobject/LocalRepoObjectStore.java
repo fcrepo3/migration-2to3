@@ -71,14 +71,19 @@ public class LocalRepoObjectStore
     /**
      * Creates an instance.
      * 
+     * The objectPaths table will be automatically rebuilt if it is empty.
+     * 
      * @param fedoraHome the FEDORA_HOME directory.
      * @param jdbcJar a jar containing the appropriate jdbc driver, or null
      *                if it's already in the classpath.
      * @param deserializer the deserializer to use.
      * @param serializer the serializer to use.
+     * @param clearObjectPaths whether to clear the objectPaths table
+     *                         initially, thus forcing a rebuild.
      */
     public LocalRepoObjectStore(File fedoraHome, File jdbcJar,
-            DODeserializer deserializer, DOSerializer serializer) {
+            DODeserializer deserializer, DOSerializer serializer,
+            boolean clearObjectPaths) {
         m_deserializer = deserializer;
         m_serializer = serializer;
         ServerConfiguration serverConfig = RepoUtil.getServerConfig(fedoraHome);
@@ -88,6 +93,9 @@ public class LocalRepoObjectStore
         m_conn = RepoUtil.getConnection(m_dbInfo);
         boolean initialized = false;
         try {
+            if (clearObjectPaths) {
+                RepoUtil.clearObjectPaths(m_conn);
+            }
             RepoUtil.buildObjectPathsIfNeeded(m_conn, m_objectStoreBase,
                     m_deserializer);
             m_st = m_conn.prepareStatement(
@@ -106,13 +114,17 @@ public class LocalRepoObjectStore
      * Creates an instance from properties.
      * 
      * <pre>
-     *   fedoraHome   (required) - the Fedora home directory.
-     *   jdbcJar      (optional) - a jar containing the appropriate jdbc
-     *                             driver, if it's not already in the classpath.
-     *   deserializer (optional) - the deserializer to use;
-     *                             default is DEFAULT_DESERIALIZER.
-     *   serializer   (optional) - the serializer to use;
-     *                             default is DEFAULT_SERIALIZER.
+     *   fedoraHome       (required) - the Fedora home directory.
+     *   jdbcJar          (optional) - a jar containing the appropriate jdbc
+     *                                 driver, if it's not already in the
+     *                                 classpath.
+     *   deserializer     (optional) - the deserializer to use;
+     *                                 default is DEFAULT_DESERIALIZER.
+     *   serializer       (optional) - the serializer to use;
+     *                                 default is DEFAULT_SERIALIZER.
+     *   clearObjectPaths (optional) - whether to clear the objectPaths table
+     *                                 initially, thus forcing a rebuild.
+     *                                 default is true.
      * </pre>
      * 
      * @param props the properties.
@@ -123,7 +135,10 @@ public class LocalRepoObjectStore
                 (DODeserializer) ConfigUtil.construct(props, "deserializer", 
                 DEFAULT_DESERIALIZER),
                 (DOSerializer) ConfigUtil.construct(props, "serializer", 
-                DEFAULT_SERIALIZER));
+                DEFAULT_SERIALIZER),
+                ConfigUtil.getOptionalBoolean(props,
+                                              "clearObjectPaths",
+                                              true));
     }
     
     //---

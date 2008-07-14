@@ -139,6 +139,24 @@ public abstract class RepoUtil {
                     + "and password are correct.");
         }
     }
+   
+    /**
+     * Clears the content of the objectPaths table.
+     * 
+     * @param conn the connection to use.
+     */
+    public static void clearObjectPaths(Connection conn) {
+        Statement st = null;
+        try {
+            st = conn.createStatement();
+            int delCount = st.executeUpdate("DELETE FROM objectPaths");
+            LOG.info("Cleared " + delCount + " rows from objectPaths table");
+        } catch (SQLException e) {
+            throw new FaultException("Error clearing objectPaths", e);
+        } finally {
+            close(st);
+        }
+    }
 
     /**
      * Populates the <code>objectPaths</code> table if it's empty.
