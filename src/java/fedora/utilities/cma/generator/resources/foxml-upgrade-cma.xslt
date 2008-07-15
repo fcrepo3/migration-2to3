@@ -129,8 +129,8 @@
               <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraRELSExt-1.0</xsl:attribute>
               <xsl:if test="$createdDate != ''">
                 <xsl:attribute name="CREATED">
-                <xsl:value-of select="$createdDate"/>
-              </xsl:attribute>
+                  <xsl:value-of select="$createdDate"/>
+                </xsl:attribute>
               </xsl:if>
               <xsl:attribute name="LABEL">RDF Statements about this object</xsl:attribute>
               <foxml:xmlContent>
@@ -138,8 +138,7 @@
                   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                   xmlns:fedora-model="info:fedora/fedora-system:def/model#">
                   <rdf:Description>
-                    <xsl:attribute
-                      name="rdf:about">
+                    <xsl:attribute name="rdf:about">
                       <xsl:text>info:fedora/</xsl:text>
                       <xsl:value-of select="@PID"/>
                     </xsl:attribute>
@@ -167,7 +166,7 @@
 
   <!-- Update RELS-EXT for all objects -->
   <xsl:template match="//foxml:datastream[@ID='RELS-EXT']/foxml:datastreamVersion">
-    <xsl:copy>
+    <foxml:datastreamVersion>
       <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
       <!-- Force expected MIMETYPE and FORMAT_URI values -->
       <xsl:attribute name="MIMETYPE">application/rdf+xml</xsl:attribute>
@@ -182,7 +181,7 @@
           <xsl:apply-templates/>
         </xsl:otherwise>
       </xsl:choose>
-    </xsl:copy>
+    </foxml:datastreamVersion>
   </xsl:template>
 
   <!-- Update RELS-INT for all objects -->
@@ -280,27 +279,25 @@
   </xsl:template>
     
   <!-- 
-    Recursively drills down into a RELS-EXT datastreamVersion, and adds a 
-    relationship to the CModel to the rdf inside
+    Recursively drills down into a RELS-EXT datastreamVersion
+    and adds a relationship to the CModel to the rdf inside
   -->
   <xsl:template name="addCModelRels">
-    <xsl:copy>
-      <xsl:for-each select="node()">
+    <xsl:for-each select="node()">
+      <xsl:copy>
+        <xsl:apply-templates select="@*"/>
         <xsl:choose>
           <xsl:when test="name(self::node()) = 'rdf:Description'"
             xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-            <xsl:copy>
-              <xsl:apply-templates select="@*"/>
               <xsl:call-template name="printCModelRels"/>
               <xsl:apply-templates select="node()"/>
-            </xsl:copy>
           </xsl:when>
           <xsl:otherwise>
             <xsl:call-template name="addCModelRels"/>
           </xsl:otherwise>
         </xsl:choose>
-      </xsl:for-each>
-    </xsl:copy>
+      </xsl:copy>
+    </xsl:for-each>
   </xsl:template>
 
   <xsl:template name="printCModelRels">
