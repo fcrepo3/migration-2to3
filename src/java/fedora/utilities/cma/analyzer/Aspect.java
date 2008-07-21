@@ -38,7 +38,7 @@ public enum Aspect {
     BINDING_KEY_ASSIGNMENTS ("BindingKeyAssignments"),
 
     /**
-     * The set of datastream IDs within the object;
+     * The set of all datastream IDs within the object;
      * <code>DatastreamIDs</code>
      */
     DATASTREAM_IDS          ("DatastreamIDs"),

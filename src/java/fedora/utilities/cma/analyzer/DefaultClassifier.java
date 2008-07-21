@@ -79,6 +79,9 @@ public class DefaultClassifier
     /** Aspects used by this instance for the purpose of classification. */
     private Set<Aspect> m_aspects;
 
+    /** Specific datastream IDs to be ignored during classification. */
+    private Set<String> m_ignoreDatastreamIDs;
+
     /** The PID generator used by this instance. */
     private PIDGenerator m_pidGen;
 
@@ -98,6 +101,10 @@ public class DefaultClassifier
      *        and BindingKeyAssignments are required and will NOT be ignored,
      *        even if specified here. Also, MIMETypes and FormatURIs will be
      *        ignored automatically if DatastreamIDs is ignored.
+     * @param ignoreDatastreamIDs
+     *        specific datastreams to ignore during classification.
+     *        This has no effect if DatastreamIDs is already specified as an
+     *        ignoreAspect.
      * @param pidGen
      *        the pid generator to use.
      * @param explicitBasicModel
@@ -105,9 +112,11 @@ public class DefaultClassifier
      *        basic FedoraObject-3.0 model.
      */
     public DefaultClassifier(Set<Aspect> ignoreAspects,
+                             Set<String> ignoreDatastreamIDs,
                              PIDGenerator pidGen,
                              boolean explicitBasicModel) {
         setAspects(ignoreAspects);
+        m_ignoreDatastreamIDs = ignoreDatastreamIDs;
         m_pidGen = pidGen;
         m_contentModels = new HashMap<Signature, DigitalObject>();
         m_memberSignatures = new HashMap<String, Signature>();
@@ -130,6 +139,13 @@ public class DefaultClassifier
      * <li> FormatURIs</li>
      * </ul>
      * <p>
+     * <b>Ignoring Specific Datastreams</b> <br/> By default, all datastreams
+     * are considered for the purpose of classification. To ignore one or 
+     * more datastreams, the <code>ignoreDatastreamIDs</code> property
+     * should be used. The value, if specified, should contain a
+     * space-delimited list of datastream IDs to ignore.  This has no effect
+     * if DatastreamIDs is already specified as an ignoreAspect.
+     * <p>
      * <b>Specifying the PIDGenerator</b> <br/> By default, a built-in PID
      * generator will be used that generates PIDs of the form:
      * <code>changeme:CModel#</code>, where # is incremented for each new
@@ -142,6 +158,7 @@ public class DefaultClassifier
      */
     public DefaultClassifier(Properties props) {
         setAspects(getIgnoreAspects(props));
+        m_ignoreDatastreamIDs = getIgnoreDatastreamIDs(props);
         if (props.get("pidPrefix") == null) {
             props.put("pidPrefix", "changeme:CModel");
         }
@@ -190,7 +207,7 @@ public class DefaultClassifier
         for (String origPID : bMechPIDs) {
             out.append("OLD_BMECH " + origPID + CR);
             i++;
-            out.append("NEW_DEPLOYMENTS " + cModelPID + "-BMech" + i + CR);
+            out.append("NEW_DEPLOYMENTS " + cModelPID + "-SDep" + i + CR);
             out.append("NEW_PARTS");
             Set<String> assignments =
                     memberSignature.getBindingKeyAssignments(origPID);
@@ -253,6 +270,7 @@ public class DefaultClassifier
         if (m_aspects.contains(Aspect.DATASTREAM_IDS)) {
             dsIDs.addAll(getDatastreamIDs(obj));
         }
+        dsIDs.removeAll(m_ignoreDatastreamIDs);
         Map<String, Set<String>> assignments = getBindingKeyAssignments(obj);
 
         addBoundDatastreams(assignments, dsIDs);
@@ -305,6 +323,20 @@ public class DefaultClassifier
         }
         return ignoreAspects;
     }
+
+    private static Set<String> getIgnoreDatastreamIDs(Properties props) {
+        Set<String> ignoreDatastreamIDs = new HashSet<String>();
+        String ignorePropVal = props.getProperty("ignoreDatastreamIDs");
+        if (ignorePropVal != null) {
+            LOG.info("Configuration specifies ignoreDatastreamIDs: "
+                    + ignorePropVal);
+            for (String id : ignorePropVal.trim().split("\\s+")) {
+                ignoreDatastreamIDs.add(id);
+            }
+        }
+        return ignoreDatastreamIDs;
+    }
+
 
     @SuppressWarnings("unchecked")
     private static Set<String> getBDefPIDs(DigitalObject obj) {
