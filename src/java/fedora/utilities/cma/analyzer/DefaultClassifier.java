@@ -228,7 +228,7 @@ public class DefaultClassifier
         DigitalObject cModelObj = new BasicDigitalObject();
         cModelObj.setLabel("Generated CModel");
         cModelObj.setPid(m_pidGen.getNextPID().toString());
-        addRelsExtIfNeeded(cModelObj, signature, m_explicitBasicModel);
+        addRelsExt(cModelObj, signature, m_explicitBasicModel);
         addInlineDS(cModelObj,
                     "DS-COMPOSITE-MODEL",
                     TEXT_XML,
@@ -412,20 +412,17 @@ public class DefaultClassifier
         return latest;
     }
 
-    private static void addRelsExtIfNeeded(DigitalObject cModelObj,
-                                             Signature signature,
-                                             boolean explicitBasicModel) {
-        if (signature.getBDefPIDs() != null
-                && signature.getBDefPIDs().size() > 0) {
-            addInlineDS(cModelObj,
-                        "RELS-EXT",
-                        RDF_XML,
-                        Constants.RELS_EXT1_0.uri,
-                        RELS_EXT_LABEL,
-                        getRelsExtContent(signature,
-                                          cModelObj.getPid(),
-                                          explicitBasicModel));
-        }
+    private static void addRelsExt(DigitalObject cModelObj,
+                                   Signature signature,
+                                   boolean explicitBasicModel) {
+        addInlineDS(cModelObj,
+                    "RELS-EXT",
+                    RDF_XML,
+                    Constants.RELS_EXT1_0.uri,
+                    RELS_EXT_LABEL,
+                    getRelsExtContent(signature,
+                                      cModelObj.getPid(),
+                                      explicitBasicModel));
     }
 
     @SuppressWarnings("unchecked")
@@ -457,10 +454,9 @@ public class DefaultClassifier
                                             String pid,
                                             boolean explicitBasicModel) {
         StringBuilder out = new StringBuilder();
-        out
-                .append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri
-                        + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri
-                        + "\">" + CR);
+        out.append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri
+                + "\" xmlns:fedora-model=\"" + Constants.MODEL.uri
+                + "\">" + CR);
         out.append("  <rdf:Description rdf:about=\"info:fedora/" + pid + "\">"
                 + CR);
         if (signature.getBDefPIDs() != null) {

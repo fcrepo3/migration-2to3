@@ -26,10 +26,10 @@ public interface Classifier {
      * Gets Behavior Mechanism Directives for the given content model,
      * which was previously returned by this classifier.
      * 
-     * <p>BMech directives specify an original BMech PID, a new BMech PID
-     * (for the copy), and a set of necessary wsdl message part name changes.
-     * This information is expected to be used by the generator in creating
-     * new BMech objects.</p>
+     * <p>BMech directives specify an original BMech PID, a new Service
+     * Deployment PID (for the copy), and a set of necessary wsdl message 
+     * part name changes. This information is expected to be used by the
+     * generator in creating new Service Deployment objects.</p>
      * 
      * Example BMech Directives:
      * <pre>
