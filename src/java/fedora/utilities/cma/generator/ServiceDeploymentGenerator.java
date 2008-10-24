@@ -132,7 +132,7 @@ class ServiceDeploymentGenerator {
         addFixedCopy(obj, "DSINPUTSPEC", newParts);
         addFixedCopy(obj, "METHODMAP", newParts);
         addFixedCopy(obj, "WSDL", newParts);
-        addRelsExt(obj, m_bDefPID, cModelPID);
+        addRelsExt(obj, cModelPID);
         copyOtherDatastreams(obj);
         return obj;
     }
@@ -142,7 +142,7 @@ class ServiceDeploymentGenerator {
     //---
 
     private String getBDefPID() {
-        // the bdef pid is found in DSINPUTSPEC's root element,
+        // the bdef pid is found in the old DSINPUTSPEC's root element,
         // <fbs:DSInputSpec bDefPID="demo:DualResImage"
         byte[] xmlContent =
                 ((DatastreamXMLMetadata) m_oldDatastreams
@@ -185,7 +185,6 @@ class ServiceDeploymentGenerator {
     }
 
     private void addRelsExt(DigitalObject obj,
-                            String bDefPID,
                             String cModelPID) {
         DatastreamXMLMetadata ds = new DatastreamXMLMetadata("UTF-8");
         ds.DSVersionable = true;
@@ -199,7 +198,7 @@ class ServiceDeploymentGenerator {
         try {
             ds.xmlContent =
                     getRelsExtContent(obj.getPid(),
-                                      bDefPID,
+                                      m_bDefPID,
                                       cModelPID,
                                       m_explicitBasicModel).getBytes("UTF-8");
             obj.addDatastreamVersion(ds, false);
@@ -246,9 +245,9 @@ class ServiceDeploymentGenerator {
     //---
 
     private static String getRelsExtContent(String pid,
-                                              String bDefPID,
-                                              String cModelPID,
-                                              boolean explicitBasicModel) {
+                                            String bDefPID,
+                                            String cModelPID,
+                                            boolean explicitBasicModel) {
         StringBuffer out = new StringBuffer();
         out
                 .append("<rdf:RDF xmlns:rdf=\"" + Constants.RDF.uri

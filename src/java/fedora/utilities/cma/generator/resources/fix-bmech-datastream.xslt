@@ -6,7 +6,8 @@
                newName - the value to replace it with
                
   Output     : The same datastream, with key occurances of oldName replaced
-               by newName.
+               by newName, and bDefPID attributes removed (DSINPUTSPEC1.1
+               and METHODMAP1.1 no longer have this attribute).
             
   Author     : Chris Wilper
 -->
@@ -96,4 +97,8 @@
     </http:operation>
   </xsl:template>
 
+  <!-- Removal of bDefPID attribute -->
+  
+  <xsl:template match="@bDefPID"/>
+  
 </xsl:stylesheet>

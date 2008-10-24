@@ -28,8 +28,10 @@
     (RELS-EXT will be created if needed)
   - MIMETYPE and FORMAT_URI updated for system-defined datastreams:
     DC, RELS-EXT, RELS-INT, POLICY, METHODMAP, DSINPUTSPEC, WSDL
+  - bDefPID attribute dropped for SDep METHODMAP and DSINPUTSPEC datastreams
   
   11/30/07 Aaron Birkland (birkland@cs.cornell.edu)
+  10/24/08 Chris Wilper (cwilper@fedora-commons.org)
 -->
 
 <xsl:stylesheet version="1.0"
@@ -224,7 +226,7 @@
           <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
           <!-- Force expected MIMETYPE and FORMAT_URI values -->
           <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDepMethodMap-1.0</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraSDepMethodMap-1.1</xsl:attribute>
         </xsl:when>
         <xsl:otherwise>
           <!-- Not an SDef or SDep, leave attributes unchanged --> 
@@ -245,7 +247,7 @@
           <xsl:copy-of select="@*[name() != 'MIMETYPE' and name() != 'FORMAT_URI']"/>
           <!-- Force expected MIMETYPE and FORMAT_URI values -->
           <xsl:attribute name="MIMETYPE">text/xml</xsl:attribute>
-          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraDSInputSpec-1.0</xsl:attribute>
+          <xsl:attribute name="FORMAT_URI">info:fedora/fedora-system:FedoraDSInputSpec-1.1</xsl:attribute>
         </xsl:when>
         <xsl:otherwise>
           <!-- Not an SDep, leave attributes unchanged --> 
@@ -256,6 +258,9 @@
       <xsl:apply-templates/>
     </xsl:copy>
   </xsl:template>
+ 
+  <!-- Drop old bDefPID attribute for SDep METHODMAPs and DSINPUTSPECs --> 
+  <xsl:template match="@bDefPID"/>
 
   <!-- Update WSDL for SDeps -->
   <xsl:template match="//foxml:datastream[@ID='WSDL']/foxml:datastreamVersion">
