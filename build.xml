@@ -119,10 +119,13 @@
     <copy file="${lib.fedora-server}" todir="build/analyzer-dist/lib"/>
     <copy file="${lib.commons-httpclient}" todir="build/analyzer-dist/lib"/>
     <copy file="${lib.commons-logging}" todir="build/analyzer-dist/lib"/>
-  	<copy file="${lib.trippi}" todir="build/analyzer-dist/lib"/>
-  	<copy file="${lib.openrdf}" todir="build/analyzer-dist/lib"/>
-  	<copy file="${lib.stax}" todir="build/analyzer-dist/lib"/>
-  	<copy file="${lib.staxImpl}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.jrdf}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.slf4j-api}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.slf4j-jdk14}" todir="build/analyzer-dist/lib"/>    
+    <copy file="${lib.trippi}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.openrdf}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.stax}" todir="build/analyzer-dist/lib"/>
+    <copy file="${lib.staxImpl}" todir="build/analyzer-dist/lib"/>
     <copy file="src/config/log4j.properties" todir="build/analyzer-dist"/>
     <mkdir dir="dist"/>
     <jar jarfile="dist/analyzer.jar"
@@ -159,6 +162,9 @@
     <copy file="${lib.fedora-server}" todir="build/generator-dist/lib"/>
     <copy file="${lib.commons-httpclient}" todir="build/generator-dist/lib"/>
     <copy file="${lib.commons-logging}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.jrdf}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.slf4j-api}" todir="build/generator-dist/lib"/>
+    <copy file="${lib.slf4j-jdk14}" todir="build/generator-dist/lib"/>    
     <copy file="${lib.trippi}" todir="build/generator-dist/lib"/>
     <copy file="${lib.openrdf}" todir="build/generator-dist/lib"/>
     <copy file="${lib.stax}" todir="build/generator-dist/lib"/>
@@ -199,10 +205,13 @@
     <copy file="${lib.fedora-server}" todir="build/transformer-dist/lib"/>
     <copy file="${lib.commons-httpclient}" todir="build/transformer-dist/lib"/>
     <copy file="${lib.commons-logging}" todir="build/transformer-dist/lib"/>
-  	<copy file="${lib.trippi}" todir="build/transformer-dist/lib"/>
-  	<copy file="${lib.openrdf}" todir="build/transformer-dist/lib"/>
-  	<copy file="${lib.stax}" todir="build/transformer-dist/lib"/>
-  	<copy file="${lib.staxImpl}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.jrdf}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.slf4j-api}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.slf4j-jdk14}" todir="build/transformer-dist/lib"/>    
+    <copy file="${lib.trippi}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.openrdf}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.stax}" todir="build/transformer-dist/lib"/>
+    <copy file="${lib.staxImpl}" todir="build/transformer-dist/lib"/>
     <copy file="src/config/log4j.properties" todir="build/transformer-dist"/>
     <mkdir dir="dist"/>
     <jar jarfile="dist/transformer.jar"
