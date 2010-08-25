@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.file;
@@ -17,28 +17,28 @@ import java.io.PrintWriter;
 
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
 /**
  * Utility methods for working with files and directories.
- * 
+ *
  * @author Chris Wilper
  */
 public abstract class FileUtil {
-   
+
     /** Buffer size, in bytes, for reads/writes; 4096. */
     public static final int READ_BUFFER_SIZE = 4096;
-    
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(FileUtil.class);
-   
+
     /** System-dependent line separator. */
     private static final String CR = System.getProperty("line.separator");
-   
+
     /**
      * Removes all files (and optionally, directories) within the given
      * directory.
-     * 
+     *
      * @param dir the directory.
      * @param recursive whether subdirectories should be removed recursively.
      * @return whether deletion of all files/directories was successful.
@@ -47,11 +47,11 @@ public abstract class FileUtil {
         File[] files = dir.listFiles();
         return clearDirectories(files, recursive) && clearFiles(files);
     }
-   
+
     /**
      * Gets an absolute file based on a given path, relative to a parent
      * directory or by itself, if absolute.
-     * 
+     *
      * @param parentDir the parent directory.
      * @param path the path, relative to the parent or absolute.
      * @return the file.
@@ -63,11 +63,11 @@ public abstract class FileUtil {
         }
         return new File(parentDir, path).getAbsoluteFile();
     }
-   
+
     /**
      * Writes (or overwrites) the given file with the content of the
      * given stream.
-     * 
+     *
      * @param source the stream to read from.
      * @param file the file to write to.
      * @throws FaultException if the operation failed due to an I/O error.
@@ -85,11 +85,11 @@ public abstract class FileUtil {
             close(sink);
         }
     }
-   
+
     /**
-     * Writes (or overwrites) the given file (using UTF-8 encoding) with the 
+     * Writes (or overwrites) the given file (using UTF-8 encoding) with the
      * content of the given string.
-     * 
+     *
      * @param source the string to write.
      * @param file the file to write to.
      * @throws FaultException if the operation failed due to an I/O error.
@@ -107,11 +107,11 @@ public abstract class FileUtil {
             close(writer);
         }
     }
-    
+
     /**
      * Sends all bytes from one stream to another.
      *
-     * Both streams will be closed when this method returns, whether it was 
+     * Both streams will be closed when this method returns, whether it was
      * ultimately successful or not.
      *
      * @param  source         the stream to read from.
@@ -134,13 +134,13 @@ public abstract class FileUtil {
             close(sink);
         }
     }
-   
+
     /**
      * Reads the content of a UTF-8 encoded text stream into a string.
-     * 
+     *
      * The stream will be closed when this method returns, whether it
      * was ultimately successful or not.
-     * 
+     *
      * @param source the source stream.
      * @return the string.
      * @throws FaultException if the operation failed due to an I/O error.
@@ -166,7 +166,7 @@ public abstract class FileUtil {
     /**
      * Closes a stream if it's non-null, logging a warning if an error is
      * encountered.
-     * 
+     *
      * @param stream the stream to close.
      */
     public static void close(Closeable stream) {
@@ -176,7 +176,7 @@ public abstract class FileUtil {
             LOG.warn("Unable to close stream", e);
         }
     }
-    
+
     private static boolean clearDirectories(File[] files, boolean recursive) {
         for (File file : files) {
             if (file.isDirectory() && recursive) {
@@ -190,7 +190,7 @@ public abstract class FileUtil {
         }
         return true;
     }
-    
+
     private static boolean clearFiles(File[] files) {
         for (File file : files) {
             if (!file.isDirectory() && !file.delete()) {
@@ -199,5 +199,5 @@ public abstract class FileUtil {
         }
         return true;
     }
-    
+
 }

@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.cma.generator;
@@ -18,12 +18,12 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
-import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.translation.DOSerializer;
-import fedora.server.storage.types.DigitalObject;
-import fedora.server.storage.types.DigitalObjectUtil;
+import org.fcrepo.server.storage.translation.DODeserializer;
+import org.fcrepo.server.storage.translation.DOSerializer;
+import org.fcrepo.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.types.DigitalObjectUtil;
 
 import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
@@ -38,28 +38,28 @@ import fedora.utilities.file.FileUtil;
  * @author Chris Wilper
  */
 public class Generator {
-    
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(Generator.class);
-   
+
     /** Contains the base stylesheet for upgrading + setting new cmodel. */
     private static final String XSLT_TEMPLATE;
-   
+
     /** Where the original BMechs can be read from. */
     private final ObjectStore m_store;
-    
+
     /** Where to find the other input files, and send output files. */
     private final File m_sourceDir;
-    
+
     /** The deserializer to use when reading cModels from sourceDir. */
     private final DODeserializer m_cModelDeserializer;
-    
+
     /** The serializer to use when writing bMechs to sourceDir. */
     private final DOSerializer m_serializer;
-   
+
     /** Whether the basic content model will be explicit in the output. */
     private final boolean m_explicitBasicModel;
-    
+
     static {
         // read the xslt template from the jar into XSLT_TEMPLATE
         final String xsltBase =  "fedora/utilities/cma/generator/resources/";
@@ -67,10 +67,10 @@ public class Generator {
                 xsltBase + "foxml-upgrade-cma.xslt");
         XSLT_TEMPLATE = FileUtil.readTextStream(in);
     }
-    
+
     /**
      * Creates an instance.
-     * 
+     *
      * @param store where the original BMechs can be read from.
      * @param sourceDir where to find the input files, and to send output files.
      * @param cModelDeserializer the deserializer to use when reading cModels
@@ -90,10 +90,10 @@ public class Generator {
         m_serializer = serializer;
         m_explicitBasicModel = explicitBasicModel;
     }
-    
+
     /**
      * Creates an instance from properties.
-     * 
+     *
      * <pre>
      *   store                - where the original BMechs can be read from.
      *                          Default value is
@@ -102,10 +102,10 @@ public class Generator {
      *                          output files.
      *   cModelDeserializer   - the deserializer to use when reading cModels
      *                          from sourceDir.  Default value is
-     *               "fedora.server.storage.translation.FOXML1_1DODeserializer"
+     *               "org.fcrepo.server.storage.translation.FOXML1_1DODeserializer"
      *   serializer           - the serializer to use when writing bMechs
      *                          to sourceDir.  Default value is
-     *                 "fedora.server.storage.translation.FOXML1_1DOSerializer"
+     *                 "org.fcrepo.server.storage.translation.FOXML1_1DOSerializer"
      * </pre>
      *
      * @param props the properties to get configuration values from.
@@ -120,15 +120,15 @@ public class Generator {
         m_sourceDir = ConfigUtil.getRequiredFile(props, "sourceDir");
         m_cModelDeserializer = (DODeserializer) ConfigUtil.construct(props,
                 "cModelDeserializer",
-                "fedora.server.storage.translation.FOXML1_1DODeserializer");
+                "org.fcrepo.server.storage.translation.FOXML1_1DODeserializer");
         m_serializer = (DOSerializer) ConfigUtil.construct(props,
                 "serializer",
-                "fedora.server.storage.translation.FOXML1_1DOSerializer");
+                "org.fcrepo.server.storage.translation.FOXML1_1DOSerializer");
         m_explicitBasicModel = ConfigUtil.getOptionalBoolean(props,
                 "explicitBasicModel",
                 false);
     }
-   
+
     /**
      * Generates all necessary stylesheets and SDeps.
      */
@@ -149,11 +149,11 @@ public class Generator {
         LOG.info("Generated stylesheets service deployments for " + count
                 + " data object content models.");
     }
-    
+
     //---
     // Instance helpers
     //---
-    
+
     private void writeNoCModelStylesheet(String filePrefix) {
         File listFile = new File(m_sourceDir, filePrefix + ".txt");
         if (listFile.exists()) {
@@ -163,7 +163,7 @@ public class Generator {
                     + xsltFile.getName());
         }
     }
-    
+
     private void generateAll(DigitalObject cModel, String key) {
         LOG.info("Writing stylesheet for objects with content model "
                 + cModel.getPid());
@@ -182,7 +182,7 @@ public class Generator {
             generateSDeps(sDepsFile, key, cModel.getPid());
         }
     }
-    
+
     private void generateSDeps(File sDepsFile, String key, String cModelPID) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -194,7 +194,7 @@ public class Generator {
                     + "from " + sDepsFile.getPath(), e);
         }
     }
-    
+
     private void generateSDeps(BufferedReader reader, String key,
             String cModelPID)
             throws IOException {
@@ -221,7 +221,7 @@ public class Generator {
             line = reader.readLine();
         }
     }
-    
+
     private Map<String, String> parseNewParts(String[] parts) {
         Map<String, String> map = new HashMap<String, String>();
         for (int i = 1; i < parts.length; i++) {
@@ -230,8 +230,8 @@ public class Generator {
         }
         return map;
     }
-   
-    private void generateSDep(String oldPID, String newPID, 
+
+    private void generateSDep(String oldPID, String newPID,
             Map<String, String> newParts, File outFile, String cModelPID) {
         LOG.info("Generating service deployment " + newPID
                 + " from original, " + oldPID);
@@ -246,16 +246,16 @@ public class Generator {
                 new ServiceDeploymentGenerator(oldBMech,
                                                m_explicitBasicModel);
         DigitalObject newSDep = sDepGen.generate(newPID, newParts, cModelPID);
-        RepoUtil.writeObject(m_serializer, newSDep, outFile); 
+        RepoUtil.writeObject(m_serializer, newSDep, outFile);
     }
-    
+
     //---
     // Command-line
     //---
-    
+
     /**
      * Command-line entry point for the generator.
-     * 
+     *
      * @param args command-line arguments.
      */
     public static void main(String[] args) {
@@ -294,7 +294,7 @@ public class Generator {
             }
         }
     }
-    
+
     private static void exitFatally() {
         System.exit(1);
     }

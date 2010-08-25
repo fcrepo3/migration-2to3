@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.cma.generator;
@@ -26,26 +26,26 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
-import org.xml.sax.SAXException;
-
 import org.w3c.dom.Document;
 
-import fedora.common.Constants;
-import fedora.common.FaultException;
-import fedora.common.Models;
+import org.xml.sax.SAXException;
 
-import fedora.server.storage.types.BasicDigitalObject;
-import fedora.server.storage.types.Datastream;
-import fedora.server.storage.types.DatastreamXMLMetadata;
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.common.Constants;
+import org.fcrepo.common.FaultException;
+import org.fcrepo.common.Models;
+
+import org.fcrepo.server.storage.types.BasicDigitalObject;
+import org.fcrepo.server.storage.types.Datastream;
+import org.fcrepo.server.storage.types.DatastreamXMLMetadata;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 /**
  * Utility for generating modified copies of existing BMechs.
- * 
+ *
  * @author Chris Wilper
  */
 class ServiceDeploymentGenerator {
-    
+
     /** System-dependent line separator. */
     private static final String CR = System.getProperty("line.separator");
 
@@ -69,7 +69,7 @@ class ServiceDeploymentGenerator {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param oldBMech
      *        the source behavior mechanism object.
      * @param explicitBasicModel
@@ -110,7 +110,7 @@ class ServiceDeploymentGenerator {
     /**
      * Generates a copy of the source bMech with a different PID and new part
      * names.
-     * 
+     *
      * @param newPID
      *        the PID to use for the copy.
      * @param newParts

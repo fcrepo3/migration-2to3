@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.cma.analyzer;
@@ -16,16 +16,16 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import fedora.common.Constants;
-import fedora.common.FaultException;
-import fedora.common.Models;
+import org.fcrepo.common.Constants;
+import org.fcrepo.common.FaultException;
+import org.fcrepo.common.Models;
 
-import fedora.server.storage.types.BasicDigitalObject;
-import fedora.server.storage.types.DSBinding;
-import fedora.server.storage.types.Datastream;
-import fedora.server.storage.types.DatastreamXMLMetadata;
-import fedora.server.storage.types.DigitalObject;
-import fedora.server.storage.types.Disseminator;
+import org.fcrepo.server.storage.types.BasicDigitalObject;
+import org.fcrepo.server.storage.types.DSBinding;
+import org.fcrepo.server.storage.types.Datastream;
+import org.fcrepo.server.storage.types.DatastreamXMLMetadata;
+import org.fcrepo.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.types.Disseminator;
 
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.digitalobject.PIDGenerator;
@@ -36,7 +36,7 @@ import static fedora.utilities.cma.analyzer.Constants.UTF8;
 /**
  * A classifier that can use several key aspects of the given objects to assign
  * content models.
- * 
+ *
  * @author Chris Wilper
  */
 @SuppressWarnings("deprecation")
@@ -69,7 +69,7 @@ public class DefaultClassifier
     /** Label for RELS-EXT datastreams. */
     private static final String RELS_EXT_LABEL =
             "RDF Statements about this object";
-    
+
     /** Current date/time, for new datastreams. */
     private static final Date NOW = new Date();
 
@@ -80,22 +80,22 @@ public class DefaultClassifier
     private Set<Aspect> m_aspects;
 
     /** Specific datastream IDs to be ignored during classification. */
-    private Set<String> m_ignoreDatastreamIDs;
+    private final Set<String> m_ignoreDatastreamIDs;
 
     /** The PID generator used by this instance. */
-    private PIDGenerator m_pidGen;
+    private final PIDGenerator m_pidGen;
 
     /** Map of content models used for each signature. */
-    private Map<Signature, DigitalObject> m_contentModels;
+    private final Map<Signature, DigitalObject> m_contentModels;
 
     /** Map of member signatures used for each content model (keyed by PID). */
-    private Map<String, Signature> m_memberSignatures;
+    private final Map<String, Signature> m_memberSignatures;
 
     /**
      * Constructs an instance that uses the given aspects for the purpose of
      * classification, and the given generator for the purpose of assigning pids
      * to generated content models.
-     * 
+     *
      * @param ignoreAspects
      *        aspects to ignore for classification. NOTE: BDefPIDs, BMechPIDs,
      *        and BindingKeyAssignments are required and will NOT be ignored,
@@ -140,7 +140,7 @@ public class DefaultClassifier
      * </ul>
      * <p>
      * <b>Ignoring Specific Datastreams</b> <br/> By default, all datastreams
-     * are considered for the purpose of classification. To ignore one or 
+     * are considered for the purpose of classification. To ignore one or
      * more datastreams, the <code>ignoreDatastreamIDs</code> property
      * should be used. The value, if specified, should contain a
      * space-delimited list of datastream IDs to ignore.  This has no effect
@@ -152,7 +152,7 @@ public class DefaultClassifier
      * PID. If a property is found named <code>pidGen</code>, the value
      * specifies the PIDGenerator class to use, and the class must have a
      * constructor that accepts a Properties object for configuration.
-     * 
+     *
      * @param props
      *        the properties to get the configuration from.
      */
@@ -279,7 +279,7 @@ public class DefaultClassifier
                                      ? obj.getExtProperty(
                                              Constants.MODEL.CONTENT_MODEL.uri)
                                      : null,
-                             m_aspects.contains(Aspect.BDEF_PIDS) 
+                             m_aspects.contains(Aspect.BDEF_PIDS)
                                      ? getBDefPIDs(obj)
                                      : null,
                              m_aspects.contains(Aspect.BMECH_PIDS)
@@ -402,7 +402,7 @@ public class DefaultClassifier
         }
         return map;
     }
-    
+
     @SuppressWarnings("unchecked")
     private static Map<String, String> getFormatURIs(DigitalObject obj,
                                                      Set<String> dsIDs) {
@@ -412,7 +412,7 @@ public class DefaultClassifier
         }
         return map;
     }
-   
+
     @SuppressWarnings("unchecked")
     private static Disseminator getLatestDissVersion(DigitalObject obj,
                                                      String dissID) {

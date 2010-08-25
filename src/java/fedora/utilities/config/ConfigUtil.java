@@ -1,34 +1,34 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.config;
 
 import java.io.File;
 
+import java.lang.reflect.InvocationTargetException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import java.lang.reflect.InvocationTargetException;
-
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
 /**
  * Defines several utility methods for performing configuration-related tasks.
- * 
+ *
  * @author Chris Wilper
  */
 public abstract class ConfigUtil {
-    
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(ConfigUtil.class);
-    
+
     /**
      * Gets a required string from properties.  The value will be trimmed.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @return the value.
@@ -50,7 +50,7 @@ public abstract class ConfigUtil {
 
     /**
      * Gets an optional integer from properties.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @param defaultValue the value to return if the property isn't found.
@@ -69,10 +69,10 @@ public abstract class ConfigUtil {
             throw new IllegalArgumentException("Not an integer: " + value);
         }
     }
-    
+
     /**
      * Gets an optional file from properties.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @param defaultValue the value to return if the property isn't found.
@@ -86,10 +86,10 @@ public abstract class ConfigUtil {
         }
         return new File(value.trim());
     }
-    
+
     /**
      * Gets a required file from properties.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @return the value.
@@ -97,10 +97,10 @@ public abstract class ConfigUtil {
     public static File getRequiredFile(Properties props, String name) {
         return getRequiredFiles(props, name).get(0);
     }
-    
+
     /**
      * Gets one or more required files from properties.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @return one or more files.
@@ -115,11 +115,11 @@ public abstract class ConfigUtil {
         }
         return list;
     }
-            
-  
+
+
     /**
      * Gets an optional boolean from properties.
-     * 
+     *
      * @param props properties in which to find the value.
      * @param name property name.
      * @param defaultValue the value to return if the property isn't found.
@@ -146,7 +146,7 @@ public abstract class ConfigUtil {
 
     /**
      * Creates an instance of a configurable class.
-     * 
+     *
      * @param props properties in which to find the value, and to pass to
      *        the properties constructor, if such a constructor exists.
      * @param propName the property specifying the class to construct.
@@ -176,7 +176,7 @@ public abstract class ConfigUtil {
         }
         // CHECKSTYLE:ON
     }
-    
+
     private static RuntimeException constructionFailed(String className,
             Throwable th) {
         String message = "Error constructing class: " + className;
@@ -190,6 +190,6 @@ public abstract class ConfigUtil {
         }
         throw new FaultException(message, th);
     }
- 
+
 
 }

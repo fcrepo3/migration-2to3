@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 
@@ -11,15 +11,15 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
-import java.util.Properties;
-
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 
-import fedora.common.FaultException;
+import java.util.Properties;
+
+import org.fcrepo.common.FaultException;
 
 /**
  * Allows one to load a JDBC driver at runtime. java.sql.DriverManager will
@@ -31,19 +31,19 @@ import fedora.common.FaultException;
  * that wasn't. Note that we must perform the registration on the instance
  * ourselves. See the utility method, loadAndRegister and the command-line test
  * below. Adapted from http://www.kfu.com/~nsayer/Java/dyn-jdbc.html
- * 
+ *
  * @author Chris Wilper
  */
 public class DriverShim
         implements Driver {
 
     /** The JDBC driver we're wrapping. */
-    private Driver m_driver;
+    private final Driver m_driver;
 
     /**
      * Constructs a DriverShim over the given driver in order to make it look
      * like it came from this classloader.
-     * 
+     *
      * @param driver the driver.
      */
     public DriverShim(Driver driver) {
@@ -53,7 +53,7 @@ public class DriverShim
     /**
      * Loads the driver from the given jar file, then registers it with the
      * driver manager.
-     * 
+     *
      * @param driverJarFile the driver jar file.
      * @param driverClassName the driver class name.
      * @throws ClassNotFoundException if the class can't be found.
@@ -72,13 +72,13 @@ public class DriverShim
     /**
      * Loads the driver from the given URL pointing to the jar file, then
      * registers it with the driver manager.
-     * 
+     *
      * @param driverURL the URL to the jar file.
      * @param driverClassName the driver class name
      * @throws ClassNotFoundException if the class can't be found.
      */
     public static final void loadAndRegister(URL driverURL,
-            String driverClassName) 
+            String driverClassName)
             throws ClassNotFoundException {
         try {
             URLClassLoader urlCL = new URLClassLoader(new URL[] {driverURL});

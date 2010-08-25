@@ -6,8 +6,8 @@ import java.io.FileFilter;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.translation.DODeserializer;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.RecursiveFileIterator;
 
@@ -36,21 +36,21 @@ class DirObjectIterator
 
     /**
      * Constructs an instance.
-     * 
+     *
      * @param sourceDir directory to start from.
      * @param filter the file filter to use, null if none.
      * @param deserializer the deserializer to use.
      */
-    public DirObjectIterator(File sourceDir, FileFilter filter, 
+    public DirObjectIterator(File sourceDir, FileFilter filter,
             DODeserializer deserializer) {
         m_files = new RecursiveFileIterator(sourceDir, filter);
         m_deserializer = deserializer;
         m_next = getNext();
     }
-    
+
     /**
      * Gets the most recently encountered file.
-     * 
+     *
      * @return the file, or null if next() hasn't yet been called or
      *         the iterator is empty.
      */
@@ -85,7 +85,7 @@ class DirObjectIterator
     /**
      * {@inheritDoc}
      */
-    public void remove() { 
+    public void remove() {
         throw new UnsupportedOperationException("Remove not supported");
     }
 

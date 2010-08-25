@@ -2,20 +2,20 @@ package fedora.utilities.digitalobject;
 
 import java.io.File;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
-import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.translation.DODeserializer;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.FileUtil;
 
@@ -26,29 +26,29 @@ import fedora.utilities.file.FileUtil;
  */
 class LocalRepoObjectIterator
         implements Iterator<DigitalObject> {
-   
+
     /** The query to get all token, path pairs. */
     private static final String QUERY = "SELECT token, path FROM objectPaths";
-    
+
     /** The default fetch size to use when running the query. */
     private static final int DEFAULT_FETCH_SIZE = 1000;
-    
+
     /** The fetch size to use when running the query, if MySQL is being used. */
     private static final int MYSQL_FETCH_SIZE = Integer.MIN_VALUE;
-    
+
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(
             LocalRepoObjectIterator.class);
 
     /** The base dir to use when resolving relative paths. */
     private final File m_objectStoreBase;
-    
+
     /** The database connection to use. */
     private final Connection m_conn;
 
     /** The deserializer to use. */
     private final DODeserializer m_deserializer;
-    
+
     /** The result set to be iterated over. */
     private final ResultSet m_results;
 
@@ -57,7 +57,7 @@ class LocalRepoObjectIterator
 
     /**
      * Constructs an instance.
-     * 
+     *
      * @param objectStoreBase the base dir to use when resolving relative paths.
      * @param conn the database connection to use.
      * @param deserializer the deserializer to use.
@@ -70,7 +70,7 @@ class LocalRepoObjectIterator
         m_results = executeQuery();
         m_next = getNext();
     }
-        
+
     //---
     // Iterator<DigitalObject> implementation
     //---
@@ -97,14 +97,14 @@ class LocalRepoObjectIterator
     /**
      * {@inheritDoc}
      */
-    public void remove() { 
+    public void remove() {
         throw new UnsupportedOperationException("Remove not supported");
     }
-    
+
     //---
     // Object overrides
     //---
-  
+
     /**
      * {@inheritDoc}
      */
@@ -159,5 +159,5 @@ class LocalRepoObjectIterator
         RepoUtil.close(m_conn);
         return null;
     }
-    
+
 }

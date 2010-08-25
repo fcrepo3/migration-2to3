@@ -1,10 +1,10 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.digitalobject;
 
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 /**
  * Provides an iterator over a set of <code>DigitalObject</code>s.
@@ -13,7 +13,7 @@ import fedora.server.storage.types.DigitalObject;
  */
 public interface ObjectLister
         extends Iterable<DigitalObject> {
-    
+
     // no additional methods
-    
+
 }

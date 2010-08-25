@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 
@@ -10,9 +10,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -21,42 +18,45 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
-import fedora.server.config.Configuration;
-import fedora.server.config.DatastoreConfiguration;
-import fedora.server.config.ModuleConfiguration;
-import fedora.server.config.Parameter;
-import fedora.server.config.ServerConfiguration;
-import fedora.server.config.ServerConfigurationParser;
-import fedora.server.errors.ServerException;
-import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.translation.DOSerializer;
-import fedora.server.storage.translation.DOTranslationUtility;
-import fedora.server.storage.types.BasicDigitalObject;
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.server.config.Configuration;
+import org.fcrepo.server.config.DatastoreConfiguration;
+import org.fcrepo.server.config.ModuleConfiguration;
+import org.fcrepo.server.config.Parameter;
+import org.fcrepo.server.config.ServerConfiguration;
+import org.fcrepo.server.config.ServerConfigurationParser;
+import org.fcrepo.server.errors.ServerException;
+import org.fcrepo.server.storage.translation.DODeserializer;
+import org.fcrepo.server.storage.translation.DOSerializer;
+import org.fcrepo.server.storage.translation.DOTranslationUtility;
+import org.fcrepo.server.storage.types.BasicDigitalObject;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 import fedora.utilities.file.DriverShim;
 import fedora.utilities.file.FileUtil;
 
 /**
  * Utility methods for working with a local Fedora repository.
- * 
+ *
  * @author Chris Wilper
  */
 public abstract class RepoUtil {
 
     /** Logger for this class. */
     private static final Logger LOG = Logger.getLogger(RepoUtil.class);
-   
+
     /** Number of inserts to do per transaction, at most. */
     private static final int INSERT_BATCH_SIZE = 1000;
-    
+
     /**
      * Deserializes a digital object from a file.
-     * 
+     *
      * @param deserializer the deserializer to use.
      * @param file the serialized object.
      * @return the object.
@@ -84,10 +84,10 @@ public abstract class RepoUtil {
         }
         return obj;
     }
-    
+
     /**
      * Serializes a digital object to a file.
-     * 
+     *
      * @param serializer the serializer to use.
      * @param obj the object to serialize.
      * @param file the file to write to.
@@ -101,7 +101,7 @@ public abstract class RepoUtil {
         try {
             out = new FileOutputStream(file);
             serializer.getInstance().serialize(
-                    obj, out, "UTF-8", 
+                    obj, out, "UTF-8",
                     DOTranslationUtility.SERIALIZE_EXPORT_MIGRATE);
         } catch (ServerException e) {
             error = e;
@@ -124,7 +124,7 @@ public abstract class RepoUtil {
 
     /**
      * Gets a new database connection.
-     * 
+     *
      * @param dbInfo the jdbcURL, dbUsername, and dbPassword.
      * @return the connection.
      */
@@ -139,10 +139,10 @@ public abstract class RepoUtil {
                     + "and password are correct.");
         }
     }
-   
+
     /**
      * Clears the content of the objectPaths table.
-     * 
+     *
      * @param conn the connection to use.
      */
     public static void clearObjectPaths(Connection conn) {
@@ -160,7 +160,7 @@ public abstract class RepoUtil {
 
     /**
      * Populates the <code>objectPaths</code> table if it's empty.
-     * 
+     *
      * @param conn the connection to use.
      * @param objectStoreBase the base directory where Fedora objects are
      *        stored.
@@ -179,9 +179,9 @@ public abstract class RepoUtil {
 
     /**
      * Gets database connection information from the server configuration
-     * and ensures the JDBC driver is registered with the 
+     * and ensures the JDBC driver is registered with the
      * <code>DriverManager</code>.
-     * 
+     *
      * @param serverConfig server configuration.
      * @param jdbcJar the JDBC jar file containing the driver to register,
      *        or null if the jar is already expected to be in the classpath.
@@ -193,8 +193,8 @@ public abstract class RepoUtil {
         // get ConnectionPoolManager's defaultPoolName
         ModuleConfiguration cpmConfig =
                 getRequiredModuleConfig(serverConfig,
-                        "fedora.server.storage.ConnectionPoolManager",
-                        "fedora.server.storage.ConnectionPoolManagerImpl");
+                        "org.fcrepo.server.storage.ConnectionPoolManager",
+                        "org.fcrepo.server.storage.ConnectionPoolManagerImpl");
         String defaultPoolName = getRequiredParam(cpmConfig, "defaultPoolName");
 
         // get needed values from that datastore
@@ -216,7 +216,7 @@ public abstract class RepoUtil {
 
     /**
      * Gets the object store base directory from the server configuration.
-     * 
+     *
      * @param serverConfig the server configuration.
      * @param fedoraHome the directory to use to make the path absolute
      *        if it's specified as relative to FEDORA_HOME.
@@ -226,15 +226,15 @@ public abstract class RepoUtil {
             File fedoraHome) {
         ModuleConfiguration llConfig =
                 getRequiredModuleConfig(serverConfig,
-                "fedora.server.storage.lowlevel.ILowlevelStorage",
-                "fedora.server.storage.lowlevel.DefaultLowlevelStorageModule");
+                "org.fcrepo.server.storage.lowlevel.ILowlevelStorage",
+                "org.fcrepo.server.storage.lowlevel.DefaultLowlevelStorageModule");
         return getRequiredFileParam(llConfig, "object_store_base", fedoraHome);
     }
 
     /**
-     * Reads the server configuration at 
+     * Reads the server configuration at
      * <code>FEDORA_HOME/server/config/fedora.fcfg</code>.
-     * 
+     *
      * @param fedoraHome the fedora home directory.
      * @return the server configuration.
      */
@@ -260,6 +260,7 @@ public abstract class RepoUtil {
     public static void close(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {
+                conn.commit();
                 conn.close();
             }
         } catch (SQLException e) {
@@ -269,7 +270,7 @@ public abstract class RepoUtil {
 
     /**
      * Closes the statement if it's not null.
-     * 
+     *
      * @param st the statement.
      */
     public static void close(Statement st) {
@@ -283,7 +284,7 @@ public abstract class RepoUtil {
     }
     /**
      * Closes the result set if it's not null.
-     * 
+     *
      * @param results the result set.
      */
     public static void close(ResultSet results) {
@@ -295,10 +296,10 @@ public abstract class RepoUtil {
             LOG.warn("Error closing result set", e);
         }
     }
-   
+
     /**
      * Determines whether the database is MySQL.
-     * 
+     *
      * @param conn the connection to get database metadata from.
      * @return whether the database is MySQL.
      */
@@ -313,7 +314,7 @@ public abstract class RepoUtil {
     }
 
     private static ModuleConfiguration getRequiredModuleConfig(
-            ServerConfiguration serverConfig, String role, 
+            ServerConfiguration serverConfig, String role,
             String expectedImpl) {
         ModuleConfiguration moduleConfig =
                 serverConfig.getModuleConfiguration(role);

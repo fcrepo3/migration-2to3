@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.cma.analyzer;
@@ -18,13 +18,13 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import fedora.common.Constants;
-import fedora.common.FaultException;
+import org.fcrepo.common.Constants;
+import org.fcrepo.common.FaultException;
 
-import fedora.server.storage.translation.DOSerializer;
-import fedora.server.storage.types.DatastreamXMLMetadata;
-import fedora.server.storage.types.DigitalObject;
-import fedora.server.storage.types.DigitalObjectUtil;
+import org.fcrepo.server.storage.translation.DOSerializer;
+import org.fcrepo.server.storage.types.DatastreamXMLMetadata;
+import org.fcrepo.server.storage.types.DigitalObject;
+import org.fcrepo.server.storage.types.DigitalObjectUtil;
 
 import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
@@ -37,7 +37,7 @@ import static fedora.utilities.cma.analyzer.Constants.UTF8;
 /**
  * Utility for analyzing a set of Fedora objects and outputting content model
  * objects and membership lists.
- * 
+ *
  * @author Chris Wilper
  */
 public class Analyzer {
@@ -95,10 +95,10 @@ public class Analyzer {
 
     /**
      * The serializer that will be used if none is specified;
-     * <code>fedora.server.storage.translation.FOXML1_1DOSerializer</code>
+     * <code>org.fcrepo.server.storage.translation.FOXML1_1DOSerializer</code>
      */
     public static final String DEFAULT_SERIALIZER =
-            "fedora.server.storage.translation.FOXML1_1DOSerializer";
+            "org.fcrepo.server.storage.translation.FOXML1_1DOSerializer";
 
     //---
     // Private constants
@@ -124,10 +124,10 @@ public class Analyzer {
     //---
 
     /** The classifier this instance uses. */
-    private Classifier m_classifier;
+    private final Classifier m_classifier;
 
     /** The output format of the content model objects. */
-    private DOSerializer m_serializer;
+    private final DOSerializer m_serializer;
 
     /** The directory the content model objects and lists will be sent to. */
     private File m_outputDir;
@@ -147,7 +147,7 @@ public class Analyzer {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param classifier
      *        the classifier to use.
      * @param serializer
@@ -160,14 +160,14 @@ public class Analyzer {
 
     /**
      * Creates an instance from properties.
-     * 
+     *
      * <pre>
      *   classifier (optional) - the classifier to use;
      *                           default is DEFAULT_CLASSIFIER.
      *   serializer (optional) - the serializer to use for output objects;
      *                           default is DEFAULT_SERIALIZER.
      * </pre>
-     * 
+     *
      * @param props
      *        the properties.
      */
@@ -189,7 +189,7 @@ public class Analyzer {
     /**
      * Iterates the given objects, classifying them and sending output to the
      * given directory.
-     * 
+     *
      * @param lister
      *        provides the list of objects to classify.
      * @param outputDir
@@ -388,7 +388,7 @@ public class Analyzer {
 
     /**
      * Command-line entry point for the analyzer.
-     * 
+     *
      * @param args
      *        command-line arguments.
      */

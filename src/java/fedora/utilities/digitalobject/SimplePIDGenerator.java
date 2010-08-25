@@ -2,7 +2,7 @@ package fedora.utilities.digitalobject;
 
 import java.util.Properties;
 
-import fedora.common.PID;
+import org.fcrepo.common.PID;
 
 /**
  * A simple non-persistent pid generator implementation.
@@ -26,9 +26,9 @@ public class SimplePIDGenerator
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param pidPrefix the PID prefix to use.
-     */ 
+     */
     public SimplePIDGenerator(String pidPrefix) {
         m_pidPrefix = pidPrefix;
     }
@@ -40,7 +40,7 @@ public class SimplePIDGenerator
      *   pidPrefix (optional) - the PID prefix to use;
      *                          default is DEFAULT_PID_PREFIX.
      * </pre>
-     * 
+     *
      * @param props the properties.
      */
     public SimplePIDGenerator(Properties props) {

@@ -1,5 +1,5 @@
 /* The contents of this file are subject to the license and copyright terms
- * detailed in the license directory at the root of the source tree (also 
+ * detailed in the license directory at the root of the source tree (also
  * available online at http://www.fedora.info/license/).
  */
 package fedora.utilities.digitalobject;
@@ -9,70 +9,70 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import fedora.common.FaultException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
 
-import fedora.server.config.ServerConfiguration;
-import fedora.server.storage.translation.DODeserializer;
-import fedora.server.storage.translation.DOSerializer;
-import fedora.server.storage.types.DigitalObject;
+import org.fcrepo.common.FaultException;
+
+import org.fcrepo.server.config.ServerConfiguration;
+import org.fcrepo.server.storage.translation.DODeserializer;
+import org.fcrepo.server.storage.translation.DOSerializer;
+import org.fcrepo.server.storage.types.DigitalObject;
 
 import fedora.utilities.config.ConfigUtil;
 import fedora.utilities.file.FileUtil;
 
 /**
  * Non-threadsafe interface to a local repository.
- * 
+ *
  * @author Chris Wilper
  */
 public class LocalRepoObjectStore
         implements ObjectStore {
-    
-    /** 
+
+    /**
      * The deserializer that will be used if none is specified;
-     * <code>fedora.server.storage.translation.FOXML1_0DODeserializer</code>
+     * <code>org.fcrepo.server.storage.translation.FOXML1_0DODeserializer</code>
      */
     public static final String DEFAULT_DESERIALIZER =
-            "fedora.server.storage.translation.FOXML1_0DODeserializer";
-    
-    /** 
+            "org.fcrepo.server.storage.translation.FOXML1_0DODeserializer";
+
+    /**
      * The serializer that will be used if none is specified;
-     * <code>fedora.server.storage.translation.FOXML1_1DOSerializer</code>
+     * <code>org.fcrepo.server.storage.translation.FOXML1_1DOSerializer</code>
      */
     public static final String DEFAULT_SERIALIZER =
-            "fedora.server.storage.translation.FOXML1_1DOSerializer";
-    
+            "org.fcrepo.server.storage.translation.FOXML1_1DOSerializer";
+
     /** The deserializer to use. */
     private final DODeserializer m_deserializer;
-   
+
     /** The serializer to use. */
     private final DOSerializer m_serializer;
-   
+
     /** The base directory where Fedora objects are stored. */
     private final File m_objectStoreBase;
-   
+
     /** The URL, username, and password info for the Fedora database. */
     private final Map<String, String> m_dbInfo;
-    
+
     /** The connection this instance uses. */
     private final Connection m_conn;
-   
+
     /** The prepared statement this instance uses. */
     private final PreparedStatement m_st;
-   
+
     /**
      * Creates an instance.
-     * 
+     *
      * The objectPaths table will be automatically rebuilt if it is empty.
-     * 
+     *
      * @param fedoraHome the FEDORA_HOME directory.
      * @param jdbcJar a jar containing the appropriate jdbc driver, or null
      *                if it's already in the classpath.
@@ -109,10 +109,10 @@ public class LocalRepoObjectStore
             }
         }
     }
-    
+
     /**
      * Creates an instance from properties.
-     * 
+     *
      * <pre>
      *   fedoraHome       (required) - the Fedora home directory.
      *   jdbcJar          (optional) - a jar containing the appropriate jdbc
@@ -126,21 +126,21 @@ public class LocalRepoObjectStore
      *                                 initially, thus forcing a rebuild.
      *                                 default is true.
      * </pre>
-     * 
+     *
      * @param props the properties.
      */
     public LocalRepoObjectStore(Properties props) {
         this(new File(ConfigUtil.getRequiredString(props, "fedoraHome")),
                 ConfigUtil.getOptionalFile(props, "jdbcJar", null),
-                (DODeserializer) ConfigUtil.construct(props, "deserializer", 
+                (DODeserializer) ConfigUtil.construct(props, "deserializer",
                 DEFAULT_DESERIALIZER),
-                (DOSerializer) ConfigUtil.construct(props, "serializer", 
+                (DOSerializer) ConfigUtil.construct(props, "serializer",
                 DEFAULT_SERIALIZER),
                 ConfigUtil.getOptionalBoolean(props,
                                               "clearObjectPaths",
                                               true));
     }
-    
+
     //---
     // ObjectStore implementation
     //---
@@ -155,7 +155,7 @@ public class LocalRepoObjectStore
         }
         return RepoUtil.readObject(m_deserializer, file);
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -170,7 +170,7 @@ public class LocalRepoObjectStore
             throw new FaultException("Error reading: " + file.getPath(), e);
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -182,7 +182,7 @@ public class LocalRepoObjectStore
         RepoUtil.writeObject(m_serializer, obj, file);
         return true;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -202,7 +202,7 @@ public class LocalRepoObjectStore
         RepoUtil.close(m_st);
         RepoUtil.close(m_conn);
     }
-    
+
     //---
     // ObjectLister implementation
     //---
@@ -211,15 +211,15 @@ public class LocalRepoObjectStore
      * {@inheritDoc}
      */
     public Iterator<DigitalObject> iterator() {
-        return new LocalRepoObjectIterator(m_objectStoreBase, 
+        return new LocalRepoObjectIterator(m_objectStoreBase,
                 RepoUtil.getConnection(m_dbInfo),
                 m_deserializer.getInstance());
     }
-    
+
     //---
     // Object overrides
     //---
-   
+
     /**
      * {@inheritDoc}
      */
@@ -227,11 +227,11 @@ public class LocalRepoObjectStore
     public void finalize() {
         close();
     }
-    
+
     //---
     // Instance helpers
     //---
-    
+
     private File getFile(String pid) {
         String path = getPath(pid);
         if (path == null) {
@@ -239,7 +239,7 @@ public class LocalRepoObjectStore
         }
         return FileUtil.getFile(m_objectStoreBase, path);
     }
-   
+
     private String getPath(String pid) {
         ResultSet results = null;
         try {
@@ -256,5 +256,5 @@ public class LocalRepoObjectStore
             RepoUtil.close(results);
         }
     }
-    
+
 }

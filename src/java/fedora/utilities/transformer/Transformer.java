@@ -22,7 +22,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.apache.log4j.Logger;
 
-import fedora.common.FaultException;
+import org.fcrepo.common.FaultException;
 
 import fedora.utilities.Log4J;
 import fedora.utilities.config.ConfigUtil;
@@ -31,7 +31,7 @@ import fedora.utilities.file.FileUtil;
 
 /**
  * Utility to apply transformation rules to Fedora objects.
- * 
+ *
  * @author Chris Wilper
  */
 public class Transformer {
@@ -53,7 +53,7 @@ public class Transformer {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param pidFiles
      *        pid files identifying objects to transform for each associated
      *        stylesheet.
@@ -77,7 +77,7 @@ public class Transformer {
 
     /**
      * Creates an instance from properties.
-     * 
+     *
      * <pre>
      *   pidFiles  (required) - space-delimited path(s) to one or more files,
      *                          each containing a list of PIDs (one per line).
@@ -88,7 +88,7 @@ public class Transformer {
      *                          which the corresponding pid list should be
      *                          passed.
      * </pre>
-     * 
+     *
      * @param props
      *        the properties.
      * @throws IllegalArgumentException
@@ -108,7 +108,7 @@ public class Transformer {
 
     /**
      * Run all transformations.
-     * 
+     *
      * @param store
      *        the store to read from/write to.
      * @param dryRun
@@ -181,7 +181,7 @@ public class Transformer {
 
     /**
      * Transform all objects in pidFile with the indicated xsltFile.
-     * 
+     *
      * @param xsltFile
      *        the stylesheet to use for transforming the batch.
      * @param pidFile
@@ -236,7 +236,7 @@ public class Transformer {
 
     /**
      * Transform one object with the indicated xsltFile.
-     * 
+     *
      * @param xsltTransformer
      *        the compiled form of the stylesheet to use for transforming the
      *        object.
@@ -275,7 +275,7 @@ public class Transformer {
 
     /**
      * Command-line entry point for the analyzer.
-     * 
+     *
      * @param args
      *        command-line arguments.
      */
@@ -382,7 +382,7 @@ public class Transformer {
         props.setProperty("xsltFiles", xsltFiles);
         props.setProperty("pidFiles", pidFiles);
     }
-   
+
     // gets a file with name pathPrefix.txt, pathPrefix.list,
     // or simply pathPrefix if such a file exists, otherwise returns null.
     private static File getPidFile(String pathPrefix) {
